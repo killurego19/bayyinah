@@ -276,7 +276,7 @@ const V = QURAN_DATA.map(r=>({s:r[0],v:r[1],title:r[2],text:r[3]||"",foot:r[4]})
 const byKey={}; V.forEach(x=>byKey[x.s+":"+x.v]=x);
 const STOP=new Set("the a an of to in on and or is are was were be been being this that these those for with as at by from it its his her their our your my we you they he she them us i o ye thy thee thou shall will would should can could may might do does did has have had not no nor so but if then than into out up down over under about who whom which what when where why how all any each every most more much many few some such only also very just even still yet ever never own same other another".split(/\s+/));
 let LANG="English";
-const subEn="Quran Study Assistant · Khalifa Translation", subTa="குர்ஆன் கற்றல் உதவியாளர் · கலீஃபா மொழிபெயர்ப்பு";
+const subEn="Dr. Rashad Khalifa's English Translation", subTa="Dr. ரஷத் கலீஃபாவின் ஆங்கில மொழிபெயர்ப்பு";
 
 function setLang(l){
   LANG=l;
@@ -485,7 +485,7 @@ function renderWelcomeIfEmpty(){
   const w=document.createElement("div");w.className="welcome";
   w.innerHTML=`<div class="om">۝</div>
     <h2 class="${LANG==='Tamil'?'tamil':''}">${LANG==="Tamil"?"வினவுங்கள், ஆராயுங்கள்":"Ask. Explore. Understand."}</h2>
-    <p class="${LANG==='Tamil'?'tamil':''}">${LANG==="Tamil"?"முழு குர்ஆனையும் (கலீஃபா மொழிபெயர்ப்பு) அடிப்படையாகக் கொண்டது. ஒரு கேள்வியைத் தட்டச்சு செய்யுங்கள் அல்லது கீழே தேர்ந்தெடுக்கவும்.":"Grounded in the complete Quran (Rashad Khalifa translation). Type a question or pick one below."}</p>
+    <p class="${LANG==='Tamil'?'tamil':''}">${LANG==="Tamil"?"முழு குர்ஆனையும் (Dr. ரஷத் கலீஃபாவின் ஆங்கில மொழிபெயர்ப்பு) அடிப்படையாகக் கொண்டது. ஒரு கேள்வியைத் தட்டச்சு செய்யுங்கள் அல்லது கீழே தேர்ந்தெடுக்கவும்.":"Grounded in the complete Quran (Dr. Rashad Khalifa's English translation). Type a question or pick one below."}</p>
     <div class="chips">${chips}</div>`;
   chat.appendChild(w);
 }
