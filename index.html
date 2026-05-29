@@ -44,10 +44,10 @@ header{
   font-family:"Amiri",serif;font-size:150px;line-height:1;color:var(--gold);
   opacity:.05;pointer-events:none;user-select:none;
 }
-.brand{display:flex;align-items:center;gap:16px;flex:1;min-width:220px;position:relative;z-index:1}
-.seal{width:58px;height:58px;flex:0 0 58px;position:relative;
+.brand{display:flex;align-items:center;gap:18px;flex:1;min-width:220px;position:relative;z-index:1}
+.seal{width:62px;height:62px;flex:0 0 62px;position:relative;
   animation:sealIn 1s cubic-bezier(.2,.8,.2,1) both;
-  filter:drop-shadow(0 4px 14px rgba(201,162,75,.25));
+  filter:drop-shadow(0 4px 16px rgba(201,162,75,.28));
 }
 .seal svg{width:100%;height:100%;display:block}
 .seal .ring-out{transform-origin:50px 50px;animation:spin 50s linear infinite}
@@ -78,14 +78,14 @@ header{
 .title .meaning .en{font-style:italic;letter-spacing:.02em}
 .title .meaning .sep{color:var(--gold);font-size:9px;opacity:.7}
 .title .meaning .tamil{font-style:normal;font-size:13px;color:var(--parch-dim)}
-.title .rule{
-  display:flex;align-items:center;gap:8px;margin:7px 0 5px;max-width:230px;
+.title .motto{
+  font-family:"Cormorant Garamond",serif;font-weight:600;font-size:15px;letter-spacing:.04em;
+  color:var(--gold-soft);margin-top:7px;
   animation:rise .8s ease .54s both;
 }
-.title .rule span{height:1px;flex:1;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.55}
-.title .rule i{font-family:"Amiri",serif;font-style:normal;color:var(--gold);font-size:13px;opacity:.85}
+.title .motto span{color:var(--emerald);margin:0 5px;opacity:.85}
 .title .sub{
-  font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);
+  font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);margin-top:3px;
   animation:rise .8s ease .64s both;
 }
 
@@ -193,52 +193,49 @@ header{
       <div class="seal">
         <svg viewBox="0 0 100 100" fill="none">
           <defs>
-            <radialGradient id="sealGlow" cx="50%" cy="42%" r="55%">
-              <stop offset="0%" stop-color="var(--gold-soft)" stop-opacity=".45"/>
-              <stop offset="65%" stop-color="var(--gold)" stop-opacity="0"/>
+            <radialGradient id="sealGlow" cx="50%" cy="40%" r="58%">
+              <stop offset="0%" stop-color="var(--gold-soft)" stop-opacity=".5"/>
+              <stop offset="62%" stop-color="var(--gold)" stop-opacity="0"/>
             </radialGradient>
             <linearGradient id="sealStroke" x1="0" y1="0" x2="1" y2="1">
               <stop offset="0%" stop-color="var(--gold-soft)"/>
               <stop offset="100%" stop-color="var(--emerald)"/>
             </linearGradient>
-            <path id="sealArc" d="M 50,8 A 42,42 0 1,1 49.99,8" fill="none"/>
           </defs>
 
-          <circle cx="50" cy="50" r="48" fill="url(#sealGlow)"/>
+          <circle cx="50" cy="50" r="49" fill="url(#sealGlow)"/>
 
-          <!-- rotating outer ring with motto -->
+          <!-- decorative rotating ring with cardinal dots -->
           <g class="ring-out">
-            <circle cx="50" cy="50" r="46.5" stroke="url(#sealStroke)" stroke-width="1" opacity=".8"/>
-            <circle cx="50" cy="50" r="36.5" stroke="var(--emerald)" stroke-width=".5" opacity=".35"/>
-            <text font-family="Reem Kufi, sans-serif" font-size="7.4" font-weight="600" letter-spacing="1.6" fill="var(--gold-soft)">
-              <textPath href="#sealArc" startOffset="2%">GOD ALONE ✦ QURAN ALONE ✦</textPath>
-            </text>
+            <circle cx="50" cy="50" r="47" stroke="url(#sealStroke)" stroke-width="1.2" opacity=".85"/>
+            <circle cx="50" cy="3" r="1.6" fill="var(--gold-soft)"/>
+            <circle cx="50" cy="97" r="1.6" fill="var(--gold-soft)"/>
+            <circle cx="3" cy="50" r="1.6" fill="var(--emerald)"/>
+            <circle cx="97" cy="50" r="1.6" fill="var(--emerald)"/>
           </g>
+          <circle cx="50" cy="50" r="40" stroke="var(--emerald)" stroke-width=".7" opacity=".4"/>
 
-          <!-- central device: radiant light rising from an open Quran -->
+          <!-- central device: divine light rising over an open Quran -->
           <g class="device">
-            <!-- rays -->
-            <g stroke="var(--gold)" stroke-width="1" stroke-linecap="round" opacity=".75">
-              <line x1="50" y1="20" x2="50" y2="29"/>
-              <line x1="38" y1="24" x2="42" y2="31"/>
-              <line x1="62" y1="24" x2="58" y2="31"/>
-              <line x1="31" y1="33" x2="37" y2="37"/>
-              <line x1="69" y1="33" x2="63" y2="37"/>
+            <g stroke="var(--gold)" stroke-width="1.2" stroke-linecap="round" opacity=".8">
+              <line x1="50" y1="18" x2="50" y2="28"/>
+              <line x1="36" y1="22" x2="41" y2="30"/>
+              <line x1="64" y1="22" x2="59" y2="30"/>
+              <line x1="27" y1="32" x2="34" y2="37"/>
+              <line x1="73" y1="32" x2="66" y2="37"/>
             </g>
-            <!-- the One: single radiant point -->
-            <circle cx="50" cy="38" r="4.4" fill="url(#sealStroke)"/>
-            <circle cx="50" cy="38" r="7.5" stroke="var(--gold-soft)" stroke-width=".7" opacity=".5"/>
-            <!-- open book (Quran) -->
-            <path d="M50 52 C 43 47, 33 47, 27 50 L27 66 C 33 63, 43 63, 50 68 Z"
-                  fill="rgba(201,162,75,.10)" stroke="url(#sealStroke)" stroke-width="1.1" stroke-linejoin="round"/>
-            <path d="M50 52 C 57 47, 67 47, 73 50 L73 66 C 67 63, 57 63, 50 68 Z"
-                  fill="rgba(79,174,135,.10)" stroke="url(#sealStroke)" stroke-width="1.1" stroke-linejoin="round"/>
-            <line x1="50" y1="52" x2="50" y2="68" stroke="var(--gold-soft)" stroke-width="1"/>
-            <g stroke="var(--gold)" stroke-width=".5" opacity=".5">
-              <line x1="33" y1="53.5" x2="45" y2="56"/>
-              <line x1="33" y1="57.5" x2="45" y2="60"/>
-              <line x1="55" y1="56" x2="67" y2="53.5"/>
-              <line x1="55" y1="60" x2="67" y2="57.5"/>
+            <circle cx="50" cy="37" r="5" fill="url(#sealStroke)"/>
+            <circle cx="50" cy="37" r="8.5" stroke="var(--gold-soft)" stroke-width=".8" opacity=".55"/>
+            <path d="M50 53 C 42 47, 31 47, 24 50 L24 68 C 31 64, 42 64, 50 70 Z"
+                  fill="rgba(201,162,75,.12)" stroke="url(#sealStroke)" stroke-width="1.3" stroke-linejoin="round"/>
+            <path d="M50 53 C 58 47, 69 47, 76 50 L76 68 C 69 64, 58 64, 50 70 Z"
+                  fill="rgba(79,174,135,.12)" stroke="url(#sealStroke)" stroke-width="1.3" stroke-linejoin="round"/>
+            <line x1="50" y1="53" x2="50" y2="70" stroke="var(--gold-soft)" stroke-width="1.2"/>
+            <g stroke="var(--gold)" stroke-width=".6" opacity=".55">
+              <line x1="30" y1="55" x2="44" y2="57.5"/>
+              <line x1="30" y1="59.5" x2="44" y2="62"/>
+              <line x1="56" y1="57.5" x2="70" y2="55"/>
+              <line x1="56" y1="62" x2="70" y2="59.5"/>
             </g>
           </g>
         </svg>
@@ -247,8 +244,8 @@ header{
         <h1><span class="word">Bayyinah</span></h1>
         <div class="ar">الْبَيِّنَة</div>
         <div class="meaning"><span class="en">The Proof</span><span class="sep">✦</span><span class="tamil">தெளிவான சான்று</span></div>
-        <div class="rule"><span></span><i>۞</i><span></span></div>
-        <div class="sub" id="subtitle">God Alone · Quran Alone</div>
+        <div class="motto">God Alone <span>·</span> Quran Alone</div>
+        <div class="sub" id="subtitle">Dr. Rashad Khalifa's English Translation</div>
       </div>
     </div>
     <div class="langtoggle" role="group" aria-label="Answer language">
