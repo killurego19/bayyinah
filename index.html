@@ -479,8 +479,8 @@ function esc(s){return (s==null?"":String(s)).replace(/&/g,"&amp;").replace(/</g
 function isTamil(s){return /[\u0B80-\u0BFF]/.test(s);}
 
 /* ---------- welcome + chips ---------- */
-const CHIPS={English:["Explain Hajj and how to perform it","How many people were in Moses' family?","How many times is the word \"God\" mentioned?","What is the significance of the number 19?"],
-Tamil:["ஹஜ் பற்றி விளக்குங்கள்","மூஸாவின் குடும்பத்தில் எத்தனை பேர்?","\"கடவுள்\" என்ற சொல் எத்தனை முறை வருகிறது?","19 எண்ணின் முக்கியத்துவம் என்ன?"]};
+const CHIPS={English:["Explain Hajj and how to perform it","I am stressed — give me soothing advice","Give me the top 10 pieces of advice God gives in the Quran","What is the significance of the number 19?"],
+Tamil:["ஹஜ் பற்றி விளக்குங்கள்","நான் மன அழுத்தத்தில் இருக்கிறேன் — ஆறுதலான அறிவுரை தாருங்கள்","குர்ஆனில் கடவுள் தரும் முதல் 10 அறிவுரைகளைத் தாருங்கள்","19 எண்ணின் முக்கியத்துவம் என்ன?"]};
 function renderWelcomeIfEmpty(){
   if(chat.querySelector(".msg")) return;
   chat.innerHTML="";
