@@ -40,6 +40,9 @@ header{
   margin:0;letter-spacing:.5px;color:var(--parch);line-height:1
 }
 .title .ar{font-family:"Amiri",serif;color:var(--gold-soft);font-size:15px;margin-top:2px;opacity:.85}
+.title .meaning{font-family:"Cormorant Garamond",serif;font-style:italic;font-size:13.5px;color:var(--parch-dim);margin-top:3px;letter-spacing:.01em}
+.title .meaning .sep{color:var(--gold);opacity:.6;margin:0 4px}
+.title .meaning .tamil{font-style:normal;font-size:12.5px}
 .title .sub{font-size:11.5px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-top:3px}
 .langtoggle{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px}
 .langtoggle button{
@@ -138,6 +141,7 @@ header{
       <div class="title">
         <h1>Bayyinah</h1>
         <div class="ar">الْبَيِّنَة</div>
+        <div class="meaning">The Proof <span class="sep">·</span> <span class="tamil">தெளிவான சான்று</span></div>
         <div class="sub" id="subtitle">Quran Study Assistant · Khalifa Translation</div>
       </div>
     </div>
@@ -200,12 +204,23 @@ function retrieve(terms,k=12){
     let sc=0;
     for(const w of t){
       const re=new RegExp("\\b"+w.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"),"g");
-      sc += (txt.match(re)||[]).length*3 + (tit.match(re)||[]).length*4 + (ft.match(re)||[]).length*1;
+      // footnotes carry most of the explanatory content (esp. the 19/false-verse material), so weight them strongly
+      sc += (txt.match(re)||[]).length*3 + (tit.match(re)||[]).length*4 + (ft.match(re)||[]).length*4;
     }
     if(sc>0) res.push([sc,x]);
   }
   res.sort((a,b)=>b[0]-a[0]);
   return res.slice(0,k).map(r=>r[1]);
+}
+
+/* pull verses by explicit "sura:verse" reference so direct refs never get missed */
+function byRefs(refs){
+  const out=[];
+  (refs||[]).forEach(r=>{
+    const m=String(r).match(/(\d+)\s*[:\.]\s*(\d+)/);
+    if(m){ const x=byKey[parseInt(m[1])+":"+parseInt(m[2])]; if(x) out.push(x); }
+  });
+  return out;
 }
 
 /* ---------- Claude API ---------- */
@@ -231,10 +246,13 @@ async function ask(seed){
     // step 1: plan (classify + english search terms + count word)
     const plan=await claude(
       [{role:"user",content:text}],
-      `You analyze a user's question about the Quran and return ONLY JSON, no prose, no backticks.
-Schema: {"type":"count"|"topic","count_word":string|null,"terms":[english search words]}.
-"count" = the user asks how many times a specific word/term appears in the Quran text. Put the singular English word to count in count_word (e.g. "God","mercy","Moses").
-"topic" = any explanation/lookup/doubt question. Provide 3-8 English search terms (single words, include synonyms & proper names as used in the Rashad Khalifa translation, e.g. Moses not Musa, God not Allah, Contact Prayers for Salat) to find relevant verses.`,
+      `You analyze a user's question about the Quran (it may be in English OR Tamil) and return ONLY JSON, no prose, no backticks.
+Schema: {"type":"count"|"topic","count_word":string|null,"terms":[english search words],"refs":["sura:verse"]}.
+The user may write in Tamil; you MUST still output English search terms (translate the concept). Always think about HOW the Rashad Khalifa translation actually words the topic, and use THOSE words.
+"count" = asks how many times a specific word appears. Put the singular English word in count_word (e.g. "God","mercy","Moses").
+"topic" = any explanation/lookup/doubt question. Provide 5-10 English search terms as SINGLE words drawn from Khalifa's actual vocabulary (e.g. Moses not Musa, God not Allah, Contact Prayers for Salat, idol worshipers, mathematical code, nineteen). 
+- Include distinctive phrasing the footnotes would use. Example: a question about the "two false verses" should yield terms like: false, fabricated, added, idol, worshipers, tampering, 128, 129, nineteen, code.
+- If the question implies specific verses, put them in "refs" as "sura:verse" strings (e.g. the two disputed end verses of chapter 9 are "9:128" and "9:129"; also include the chapter's key footnote anchors like "9:1" and "9:127" when relevant). Otherwise refs = [].`,
       400);
     let p; try{p=parseJSON(plan);}catch{ p={type:"topic",terms:text.split(/\s+/)}; }
 
@@ -244,7 +262,15 @@ Schema: {"type":"count"|"topic","count_word":string|null,"terms":[english search
       countBlock={word:p.count_word,...c};
       verses=c.hits;
     } else {
-      verses=retrieve(p.terms&&p.terms.length?p.terms:text.split(/\s+/),12);
+      const refHits=byRefs(p.refs);
+      const kwHits=retrieve(p.terms&&p.terms.length?p.terms:text.split(/\s+/),12);
+      // referenced verses first, then keyword hits; dedup by sura:verse
+      const seen=new Set(); verses=[];
+      for(const x of refHits.concat(kwHits)){
+        const key=x.s+":"+x.v;
+        if(!seen.has(key)){ seen.add(key); verses.push(x); }
+      }
+      verses=verses.slice(0,14);
     }
 
     // build grounding context
@@ -267,7 +293,7 @@ ${countBlock?`\nThe exact count has already been computed mechanically: the word
 PROVIDED VERSES:
 ${ctx||"(none found)"}`;
 
-    const ans=await claude([{role:"user",content:text}],sys,1000);
+    const ans=await claude([{role:"user",content:text}],sys,1600);
     load.remove();
     addAnswer(ans,verses,countBlock);
   }catch(e){
