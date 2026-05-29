@@ -6,7 +6,7 @@
 // You can change the model here. Free-tier options:
 //   "gemini-2.5-flash"       -> better answers, ~250 requests/day
 //   "gemini-2.5-flash-lite"  -> highest free volume, ~1000 requests/day
-const MODEL = "gemini-2.5-flash";
+const MODEL = "gemini-2.5-flash-lite";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -38,15 +38,32 @@ export default async function handler(req, res) {
     if (system) body.system_instruction = { parts: [{ text: system }] };
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${key}`;
-    const r = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body)
-    });
 
-    const data = await r.json();
+    // Helper: one call to Gemini
+    async function callGemini(){
+      const resp = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      const json = await resp.json();
+      return { resp, json };
+    }
+
+    let { resp: r, json: data } = await callGemini();
+
+    // If rate-limited (429), wait briefly and retry ONCE automatically.
+    if (r.status === 429) {
+      await new Promise(res => setTimeout(res, 4000)); // wait 4s
+      ({ resp: r, json: data } = await callGemini());
+    }
 
     if (!r.ok) {
+      // Friendlier wording for the common rate-limit case.
+      if (r.status === 429) {
+        res.status(429).json({ error: "Busy right now (free usage limit reached for the moment). Please wait about a minute and try again." });
+        return;
+      }
       const msg = (data && data.error && data.error.message) || ("Gemini error " + r.status);
       res.status(r.status).json({ error: msg });
       return;
