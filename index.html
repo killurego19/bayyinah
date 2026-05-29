@@ -246,15 +246,39 @@ async function ask(seed){
     // step 1: plan (classify + english search terms + count word)
     const plan=await claude(
       [{role:"user",content:text}],
-      `You analyze a user's question about the Quran (it may be in English OR Tamil) and return ONLY JSON, no prose, no backticks.
-Schema: {"type":"count"|"topic","count_word":string|null,"terms":[english search words],"refs":["sura:verse"]}.
+      `You analyze a user's message to a Quran assistant (it may be in English OR Tamil) and return ONLY JSON, no prose, no backticks.
+Schema: {"type":"chat"|"count"|"topic","count_word":string|null,"terms":[english search words],"refs":["sura:verse"]}.
 The user may write in Tamil; you MUST still output English search terms (translate the concept). Always think about HOW the Rashad Khalifa translation actually words the topic, and use THOSE words.
+
+"chat" = a greeting, thanks, farewell, or small talk that is NOT a request for Quranic content (e.g. "Salaam", "hi", "thank you", "how are you", "வணக்கம்"). For chat, terms=[] and refs=[].
+
 "count" = asks how many times a specific word appears. Put the singular English word in count_word (e.g. "God","mercy","Moses").
-"topic" = any explanation/lookup/doubt question. Provide 5-10 English search terms as SINGLE words drawn from Khalifa's actual vocabulary (e.g. Moses not Musa, God not Allah, Contact Prayers for Salat, idol worshipers, mathematical code, nineteen). 
-- Include distinctive phrasing the footnotes would use. Example: a question about the "two false verses" should yield terms like: false, fabricated, added, idol, worshipers, tampering, 128, 129, nineteen, code.
-- If the question implies specific verses, put them in "refs" as "sura:verse" strings (e.g. the two disputed end verses of chapter 9 are "9:128" and "9:129"; also include the chapter's key footnote anchors like "9:1" and "9:127" when relevant). Otherwise refs = [].`,
+
+"topic" = ANY question seeking explanation, lookup, doubt-clearing, OR personal/life/spiritual advice. Provide 5-12 English search terms as SINGLE words.
+- CRITICAL for advice/personal questions: translate the EMOTION or SITUATION into the spiritual CONCEPTS the Quran addresses, not the literal words. 
+  Example: "I have a short temper / I get angry" -> anger, restrain, patience, forgive, pardon, tolerance, gentleness, self-control, calm, suppress.
+  Example: "I am anxious / worried" -> fear, anxiety, trust, reassurance, patience, remembrance, contentment, hardship, ease.
+  Example: "I feel hopeless / depressed" -> despair, hope, mercy, relief, patience, grief, comfort, ease.
+  Example: "how to treat my parents" -> parents, kindness, honor, gratitude, mother, father, respect.
+- Also draw distinctive footnote phrasing where relevant (e.g. false-verses question -> false, fabricated, added, idol, worshipers, tampering, 128, 129, nineteen, code).
+- If specific verses are implied, put them in "refs" as "sura:verse" (e.g. the disputed verses are "9:128","9:129", with anchors "9:1","9:127"). Otherwise refs=[].`,
       400);
     let p; try{p=parseJSON(plan);}catch{ p={type:"topic",terms:text.split(/\s+/)}; }
+
+    // --- conversational branch: greetings / thanks / small talk (no retrieval) ---
+    if(p.type==="chat"){
+      const chatSys=`You are Bayyinah, a warm, courteous, righteous Quran study assistant (Rashad Khalifa translation, "Quran: The Final Testament"). The user's message is conversational (a greeting, thanks, or small talk), not a request for Quranic content.
+- Reply briefly and warmly in 1-3 sentences, with good manners (adab).
+- If they greet with "Salaam"/"Assalamu alaikum", return the greeting appropriately (e.g. "Wa alaikum assalam").
+- Gently invite them to ask about the Quran, its teachings, or any guidance they seek.
+- Do NOT fabricate or quote Quranic verses here; just be kind and welcoming.
+- Respond ENTIRELY in ${LANG==="Tamil"?"Tamil (தமிழ்)":"English"}.`;
+      const greet=await claude([{role:"user",content:text}],chatSys,300);
+      load.remove();
+      addAnswer(greet,[],null);
+      busy=false; send.disabled=false; q.focus();
+      return;
+    }
 
     let countBlock=null, verses=[];
     if(p.type==="count" && p.count_word){
@@ -281,12 +305,12 @@ The user may write in Tamil; you MUST still output English search terms (transla
       return s;
     }).join("\n\n");
 
-    const sys=`You are Bayyinah, a study assistant for the Quran as translated by Rashad Khalifa ("Quran: The Final Testament"). You use his terminology (God not Allah, Contact Prayers (Salat), the number 19 / mathematical code).
+    const sys=`You are Bayyinah, a warm and righteous study assistant for the Quran as translated by Rashad Khalifa ("Quran: The Final Testament"). You use his terminology (God not Allah, Contact Prayers (Salat), the number 19 / mathematical code).
 RULES:
-- Answer using ONLY the verses and footnotes provided below. Do not add outside material or other translations.
-- Cite every claim with (sura:verse).
-- If the provided text does not contain the answer, say so plainly and suggest rephrasing — do not invent.
-- Be clear and help resolve doubts. Explain reasoning briefly.
+- Ground every point in the verses and footnotes provided below; cite each with (sura:verse). Do not bring in other translations or outside religious rulings.
+- For PERSONAL or ADVICE questions (anger, anxiety, grief, relationships, temptation, etc.): draw out the PRINCIPLES and guidance the provided verses teach and apply them compassionately and practically to the person's situation. You do NOT need a verse that names their exact problem — verses whose principles apply (e.g. restraining anger, patience, forgiveness, trust in God) are enough. Offer gentle, encouraging, righteous counsel rooted in those verses.
+- Only say you cannot help if NONE of the provided verses are even thematically relevant; in that case say so kindly and suggest how to rephrase. Never invent verses or content.
+- Be clear, warm, and concise. Explain reasoning briefly.
 - Respond ENTIRELY in ${LANG==="Tamil"?"Tamil (தமிழ்)":"English"}.
 ${countBlock?`\nThe exact count has already been computed mechanically: the word "${countBlock.word}" appears ${countBlock.n} times in the English text. ${countBlock.div19?`This IS divisible by 19 (=${countBlock.q19}×19).`:`This is NOT an exact multiple of 19.`} State this number as fact and comment briefly in light of the 19 code. Do NOT recount yourself.`:""}
 
