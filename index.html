@@ -381,7 +381,12 @@ async function ask(seed){
   addUser(text);
   const load=addLoading();
   try{
-    if(LANG==="Tamil") await loadTamil();   // ensure Tamil verse text is ready
+    if(LANG==="Tamil" && !TAMIL){
+      load.querySelector(".loading").innerHTML='<span class="dot"></span><span class="dot"></span><span class="dot"></span> தமிழ் வசனங்கள் ஏற்றப்படுகின்றன…';
+      await loadTamil();
+    } else if(LANG==="Tamil"){
+      await loadTamil();
+    }
     // step 1: plan (classify + english search terms + count word)
     const plan=await claude(
       [{role:"user",content:text}],
@@ -389,7 +394,7 @@ async function ask(seed){
 Schema: {"type":"chat"|"count"|"topic","count_word":string|null,"terms":[english search words],"refs":["sura:verse"]}.
 The user may write in Tamil; you MUST still output English search terms (translate the concept). Always think about HOW the Rashad Khalifa translation actually words the topic, and use THOSE words.
 
-"chat" = a greeting, thanks, farewell, or small talk that is NOT a request for Quranic content (e.g. "Salaam", "hi", "thank you", "how are you", "வணக்கம்"). For chat, terms=[] and refs=[].
+"chat" = ONLY a pure greeting, thanks, or farewell with no request for content (e.g. "Salaam", "hi", "thank you", "how are you", "வணக்கம்", "bye"). If the message names a sura, topic, or asks for anything from the Quran — even in romanized/transliterated Tamil (e.g. "al fatiha sollavum", "naan keattathu quranil ethanai vasangal") — it is NOT chat. When unsure, treat it as "topic", not "chat". For chat, terms=[] and refs=[].
 
 "count" = asks how many times a specific word appears (e.g. "how many times is God mentioned", "count of the word mercy"). Put the singular English word in count_word (e.g. "God","mercy","Moses","Most Gracious","Most Merciful").
 
@@ -467,7 +472,7 @@ ${countBlock?(countBlock.documented
 PROVIDED VERSES:
 ${ctx||"(none found)"}`;
 
-    const ans=await claude([{role:"user",content:text}],sys,1600);
+    const ans=await claude([{role:"user",content:text}],sys, LANG==="Tamil"?2600:2000);
     load.remove();
     addAnswer(ans,verses,countBlock);
   }catch(e){
