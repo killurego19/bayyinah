@@ -279,6 +279,22 @@ const STOP=new Set("the a an of to in on and or is are was were be been being th
 let LANG="English";
 const subEn="Dr. Rashad Khalifa's English Translation", subTa="Dr. ரஷத் கலீஃபாவின் ஆங்கில மொழிபெயர்ப்பு";
 
+/* ---------- Tamil verse text: loaded on demand (keeps English fast) ---------- */
+let TAMIL=null, tamilLoading=null;
+function loadTamil(){
+  if(TAMIL) return Promise.resolve(TAMIL);
+  if(tamilLoading) return tamilLoading;
+  tamilLoading=new Promise((resolve)=>{
+    const sc=document.createElement("script");
+    sc.src="tamil.js";              // separate file in the same folder
+    sc.onload=()=>{ TAMIL=(typeof window!=="undefined"&&window.TAMIL)||TAMIL; resolve(TAMIL); };
+    sc.onerror=()=>{ resolve(null); }; // fail gracefully: English verses still show
+    document.head.appendChild(sc);
+  });
+  return tamilLoading;
+}
+function tamilVerse(s,v){ return (TAMIL&&TAMIL[s+":"+v])||null; }
+
 function setLang(l){
   LANG=l;
   lEn.classList.toggle("on",l==="English"); lTa.classList.toggle("on",l==="Tamil");
@@ -287,6 +303,7 @@ function setLang(l){
   document.getElementById("hint").textContent = l==="Tamil"
     ? "பதில்கள் மீட்டெடுக்கப்பட்ட வசனங்களை மட்டுமே அடிப்படையாகக் கொண்டவை, மேற்கோள்களுடன். எண்ணிக்கைகள் துல்லியமாகக் கணக்கிடப்படுகின்றன."
     : "Answers are grounded only in the verses retrieved from the text, with citations. Counts are computed exactly.";
+  if(l==="Tamil") loadTamil();   // start fetching Tamil verses as soon as user switches
   renderWelcomeIfEmpty();
 }
 
@@ -364,6 +381,7 @@ async function ask(seed){
   addUser(text);
   const load=addLoading();
   try{
+    if(LANG==="Tamil") await loadTamil();   // ensure Tamil verse text is ready
     // step 1: plan (classify + english search terms + count word)
     const plan=await claude(
       [{role:"user",content:text}],
@@ -429,6 +447,7 @@ The user may write in Tamil; you MUST still output English search terms (transla
     const ctx=verses.map(x=>{
       let s=`[${x.s}:${x.v}] ${x.text}`;
       if(x.title) s=`(Section: ${x.title})\n`+s;
+      if(LANG==="Tamil"){ const tv=tamilVerse(x.s,x.v); if(tv) s+=`\nTAMIL: ${tv}`; }
       if(x.foot) s+=`\nFOOTNOTE: ${x.foot}`;
       return s;
     }).join("\n\n");
@@ -439,7 +458,8 @@ RULES:
 - For PERSONAL or ADVICE questions (anger, anxiety, grief, relationships, temptation, etc.): draw out the PRINCIPLES and guidance the provided verses teach and apply them compassionately and practically to the person's situation. You do NOT need a verse that names their exact problem — verses whose principles apply (e.g. restraining anger, patience, forgiveness, trust in God) are enough. Offer gentle, encouraging, righteous counsel rooted in those verses.
 - Only say you cannot help if NONE of the provided verses are even thematically relevant; in that case say so kindly and suggest how to rephrase. Never invent verses or content.
 - Be clear, warm, and concise. Explain reasoning briefly.
-- Respond ENTIRELY in ${LANG==="Tamil"?"Tamil (தமிழ்)":"English"}.
+- Respond ENTIRELY in ${LANG==="Tamil"?"Tamil (தமிழ்)":"English"}.${LANG==="Tamil"?`
+- When you quote a verse, quote it using the TAMIL text provided for that verse (the line marked TAMIL), not the English. Keep the (sura:verse) citation. If a verse has no TAMIL line, you may paraphrase its meaning in Tamil.`:""}
 ${countBlock?(countBlock.documented
   ? `\nThis is a documented count from Dr. Rashad Khalifa's published research: the word "${countBlock.word}" occurs ${countBlock.n} times in the Quran${countBlock.claim&&countBlock.claim!=="—"?` (${countBlock.claim})`:""}. State this number as Dr. Khalifa's documented figure. Briefly note its place in the 19-based mathematical code. Do NOT recount or contradict it.`
   : `\nThe exact count has already been computed mechanically: the word "${countBlock.word}" appears ${countBlock.n} times in the English text. ${countBlock.div19?`This IS divisible by 19 (=${countBlock.q19}×19).`:`This is NOT an exact multiple of 19.`} State this number as fact and comment briefly. Do NOT recount yourself.`):""}
@@ -492,7 +512,13 @@ function addAnswer(text,verses,countBlock){
       const nm=SURA_NAMES[x.s-1]||("Sura "+x.s);
       html+=`<div class="verse"><div class="ref">${x.s}:${x.v} — ${esc(nm)}</div>`;
       if(x.title) html+=`<div class="vtitle">${esc(x.title)}</div>`;
-      html+=`<div class="vt">${esc(x.text)}</div></div>`;
+      const tv = LANG==="Tamil" ? tamilVerse(x.s,x.v) : null;
+      if(tv){
+        html+=`<div class="vt tamil">${esc(tv)}</div>`;
+        html+=`<div class="vt" style="opacity:.6;font-size:13px;margin-top:3px">${esc(x.text)}</div></div>`;
+      } else {
+        html+=`<div class="vt">${esc(x.text)}</div></div>`;
+      }
     }
     html+=`</div>`;
   }
