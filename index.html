@@ -182,7 +182,19 @@ header{
 
 @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 @keyframes pulse{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}
-@media(max-width:560px){.title h1{font-size:27px}.welcome h2{font-size:24px}.seal{width:48px;height:48px;flex:0 0 48px}.hdr-watermark{font-size:110px}}
+@media(max-width:560px){
+  header{padding:12px 16px 10px;gap:10px}
+  .seal{width:40px;height:40px;flex:0 0 40px}
+  .title h1{font-size:22px}
+  .title .ar{font-size:18px;margin-top:1px}
+  .title .meaning{font-size:12px;margin-top:2px}
+  .title .motto{font-size:13px;margin-top:3px}
+  .title .sub{font-size:9.5px;letter-spacing:.1em;margin-top:2px}
+  .langtoggle button{padding:5px 12px;font-size:12.5px}
+  .hdr-watermark{font-size:90px}
+  .welcome h2{font-size:24px}
+  #chat{padding:16px 16px 8px}
+}
 </style>
 
 <div id="app">
@@ -345,6 +357,52 @@ function byRefs(refs){
   return out;
 }
 
+/* ---------- TOPIC HINTS ----------
+   Curated by the Bayyinah team. Each hint maps a topic to the correct verse(s).
+   If the user's question contains ANY of a hint's keywords (English or Tamil),
+   those verses are guaranteed into the retrieved set.
+   To add a hint: copy an entry below and fill in keywords + refs. Keep keywords lowercase.
+*/
+const TOPIC_HINTS=[
+  {
+    topic:"Female infanticide — the buried infant girl",
+    keywords:["buried alive","infanticide","girl child","female child","female infant","baby girl","killed daughter","சிறுமி","பெண் குழந்தை","உயிரோடு புதைக்க","பெண் சிசு"],
+    refs:["81:8","81:9","16:58","16:59","17:31"]
+  }
+  // ── add more hints here, same format ──
+];
+
+function hintRefs(question){
+  const q=(question||"").toLowerCase();
+  const refs=[];
+  for(const h of TOPIC_HINTS){
+    if(h.keywords.some(k=>q.includes(k.toLowerCase()))){
+      refs.push(...h.refs);
+    }
+  }
+  return refs;
+}
+
+/* ---------- DOCUMENTED FACT-QUESTIONS ----------
+   Whole-question facts (not single words) with Dr. Khalifa's documented figures.
+   Returns a count-card style answer when matched. Curated/verified by the team.
+*/
+const FACT_QUESTIONS=[
+  {
+    keywords:["total verses","how many verses","number of verses","verses in the quran","verses in quran",
+              "மொத்த வசன","எத்தனை வசன","வசனங்களின்","வசனங்கள் எத்தனை","வசன எண்ணிக்கை","மொத்த எண்ணிக்கை"],
+    n:6346, claim:"19×334", label:"verses in the Quran",
+    desc:"The Quran contains 6346 verses (19×334) — this is 6234 numbered verses plus 112 unnumbered Basmalahs — per Dr. Rashad Khalifa's research."
+  }
+];
+function lookupFactQuestion(question){
+  const q=(question||"").toLowerCase();
+  for(const f of FACT_QUESTIONS){
+    if(f.keywords.some(k=>q.includes(k.toLowerCase()))) return f;
+  }
+  return null;
+}
+
 /* ---------- Claude API ---------- */
 async function claude(messages,system,maxTok){
   const r=await fetch("/api/ask",{
@@ -365,6 +423,18 @@ async function ask(seed){
   addUser(text);
   const load=addLoading();
   try{
+    // documented fact-question (e.g. total verses) — answer directly, no API needed
+    const fq=lookupFactQuestion(text);
+    if(fq){
+      load.remove();
+      const cb={documented:true, word:fq.label, n:fq.n, claim:fq.claim, desc:fq.desc, div19:fq.n%19===0, q19:fq.n/19};
+      const intro = LANG==="Tamil"
+        ? `${fq.label} — டாக்டர் ரஷத் கலீஃபாவின் ஆவணப்படுத்தப்பட்ட ஆராய்ச்சியின்படி, குர்ஆனில் ${fq.n.toLocaleString()} வசனங்கள் (${fq.claim}) உள்ளன.`
+        : `According to Dr. Rashad Khalifa's documented research, the Quran contains ${fq.n.toLocaleString()} ${fq.label} (${fq.claim}).`;
+      addAnswer(intro, [], cb);
+      busy=false; send.disabled=false; q.focus();
+      return;
+    }
     // step 1: plan (classify + english search terms + count word)
     const plan=await claude(
       [{role:"user",content:text}],
@@ -415,11 +485,12 @@ The user may write in Tamil; you MUST still output English search terms (transla
         verses=c.hits;
       }
     } else {
+      const hintHits=byRefs(hintRefs(text));        // curated topic hints — highest priority
       const refHits=byRefs(p.refs);
       const kwHits=retrieve(p.terms&&p.terms.length?p.terms:text.split(/\s+/),12);
-      // referenced verses first, then keyword hits; dedup by sura:verse
+      // hint verses first, then AI refs, then keyword hits; dedup by sura:verse
       const seen=new Set(); verses=[];
-      for(const x of refHits.concat(kwHits)){
+      for(const x of hintHits.concat(refHits, kwHits)){
         const key=x.s+":"+x.v;
         if(!seen.has(key)){ seen.add(key); verses.push(x); }
       }
@@ -461,16 +532,17 @@ ${ctx||"(none found)"}`;
 /* ---------- rendering ---------- */
 const chat=document.getElementById("chat");
 function scroll(){chat.scrollTop=chat.scrollHeight;}
+function scrollToEl(el){ if(el) el.scrollIntoView({block:"start",behavior:"smooth"}); }
 function clearWelcome(){const w=document.querySelector(".welcome"); if(w)w.remove();}
 function addUser(t){
   const d=document.createElement("div");d.className="msg";
   d.innerHTML=`<div class="row"><div class="av u">؟</div><div class="bubble"><div class="who">You</div><div class="usertext ${isTamil(t)?'tamil':''}"></div></div></div>`;
-  d.querySelector(".usertext").textContent=t; chat.appendChild(d);scroll();
+  d.querySelector(".usertext").textContent=t; chat.appendChild(d); scrollToEl(d);
 }
 function addLoading(){
   const d=document.createElement("div");d.className="msg";
   d.innerHTML=`<div class="row"><div class="av a">ب</div><div class="bubble"><div class="who">Bayyinah</div><div class="loading"><span class="dot"></span><span class="dot"></span><span class="dot"></span> ${LANG==="Tamil"?"வசனங்களைத் தேடுகிறது…":"Searching the text…"}</div></div></div>`;
-  chat.appendChild(d);scroll();return d;
+  chat.appendChild(d);return d;
 }
 function addAnswer(text,verses,countBlock){
   const d=document.createElement("div");d.className="msg";
@@ -498,7 +570,7 @@ function addAnswer(text,verses,countBlock){
     html+=`</div>`;
   }
   html+=`</div></div>`;
-  d.innerHTML=html; chat.appendChild(d);scroll();
+  d.innerHTML=html; chat.appendChild(d); scrollToEl(d);
 }
 function fmt(t){
   return esc(t)
