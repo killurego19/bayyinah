@@ -127,7 +127,7 @@ header{
 .msg{max-width:760px;margin:0 auto 22px;animation:rise .5s ease both}
 .row{display:flex;gap:13px}
 .av{width:32px;height:32px;flex:0 0 32px;border-radius:9px;display:grid;place-items:center;font-family:"Amiri",serif;font-size:15px;margin-top:3px}
-.av.u{background:var(--user);color:var(--emerald);border:1px solid var(--line)}
+.av.u{background:var(--user);color:var(--emerald);border:1px solid var(--line);font-family:"Cormorant Garamond",serif;font-weight:600;font-size:18px}
 .av.a{background:linear-gradient(160deg,var(--gold),#9c7a2e);color:#1a1206;font-weight:700}
 .bubble{flex:1;min-width:0}
 .who{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
@@ -189,7 +189,15 @@ header{
   .langtoggle button{padding:5px 12px;font-size:12.5px}
   .hdr-watermark{font-size:90px}
   .welcome h2{font-size:24px}
-  #chat{padding:16px 16px 8px}
+
+  /* Full-screen chat: the whole app scrolls, header scrolls away, composer sticks to bottom */
+  html,body{height:auto;min-height:100%}
+  #app{height:auto;min-height:100dvh;min-height:100vh}
+  header{flex:0 0 auto}
+  #chat{flex:1 1 auto;overflow-y:visible;padding:16px 16px 8px}
+  .composer{position:sticky;bottom:0;z-index:5;
+    background:linear-gradient(0deg,var(--ink) 70%,rgba(12,20,17,.92) 100%);
+    padding:12px 16px calc(14px + env(safe-area-inset-bottom));border-top:1px solid var(--line)}
 }
 </style>
 
@@ -253,7 +261,7 @@ header{
           <h1><span class="word">Bayyinah</span></h1>
           <span class="ar">الْبَيِّنَة</span>
         </div>
-        <div class="meaning"><span class="en">The Proof</span><span class="sep">✦</span><span class="tamil">தெளிவான சான்று</span></div>
+        <div class="meaning"><span class="en" id="meanEn">The Proof</span><span class="tamil" id="meanTa" style="display:none">தெளிவான சான்று</span></div>
         <div class="sub" id="subtitle">Dr. Rashad Khalifa's English Translation</div>
       </div>
     </div>
@@ -293,6 +301,8 @@ function setLang(l){
   LANG=l;
   lEn.classList.toggle("on",l==="English"); lTa.classList.toggle("on",l==="Tamil");
   document.getElementById("subtitle").textContent = l==="Tamil"?subTa:subEn;
+  document.getElementById("meanEn").style.display = l==="Tamil"?"none":"";
+  document.getElementById("meanTa").style.display = l==="Tamil"?"":"none";
   q.placeholder = l==="Tamil"?"குர்ஆன் பற்றி எதையும் கேளுங்கள்…":"Ask anything about the Quran…";
   document.getElementById("hint").textContent = l==="Tamil"
     ? "பதில்கள் மீட்டெடுக்கப்பட்ட வசனங்களை மட்டுமே அடிப்படையாகக் கொண்டவை, மேற்கோள்களுடன். எண்ணிக்கைகள் துல்லியமாகக் கணக்கிடப்படுகின்றன."
@@ -528,12 +538,12 @@ ${ctx||"(none found)"}`;
 
 /* ---------- rendering ---------- */
 const chat=document.getElementById("chat");
-function scroll(){chat.scrollTop=chat.scrollHeight;}
+function scroll(){ try{ window.scrollTo(0,document.body.scrollHeight); }catch(e){} chat.scrollTop=chat.scrollHeight; }
 function scrollToEl(el){ if(el) el.scrollIntoView({block:"start",behavior:"smooth"}); }
 function clearWelcome(){const w=document.querySelector(".welcome"); if(w)w.remove();}
 function addUser(t){
   const d=document.createElement("div");d.className="msg";
-  d.innerHTML=`<div class="row"><div class="av u">؟</div><div class="bubble"><div class="who">You</div><div class="usertext ${isTamil(t)?'tamil':''}"></div></div></div>`;
+  d.innerHTML=`<div class="row"><div class="av u">Q</div><div class="bubble"><div class="who">You</div><div class="usertext ${isTamil(t)?'tamil':''}"></div></div></div>`;
   d.querySelector(".usertext").textContent=t; chat.appendChild(d); scrollToEl(d);
 }
 function addLoading(){
