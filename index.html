@@ -278,6 +278,25 @@ header{
 .conv:hover .conv-del,.conv.active .conv-del{display:grid}
 .conv-del:hover{background:rgba(255,90,90,.16);color:#ff7a7a}
 
+/* collapse (<<) / expand (>>) controls — desktop */
+.sb-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px}
+.sb-top .sb-brand{margin:0 0 0 2px}
+.sb-collapse{
+  border:1px solid var(--line);background:rgba(19,33,27,.6);color:var(--muted);cursor:pointer;
+  width:28px;height:28px;border-radius:8px;font-size:16px;line-height:1;display:grid;place-items:center;transition:.18s;
+}
+.sb-collapse:hover{border-color:var(--gold);color:var(--gold-soft)}
+.sb-expand{
+  display:none;order:-1;flex:0 0 auto;width:38px;height:38px;border-radius:10px;
+  border:1px solid var(--line);background:rgba(19,33,27,.85);color:var(--gold-soft);
+  cursor:pointer;font-size:17px;line-height:1;place-items:center;position:relative;z-index:1;
+}
+.sb-expand:hover{border-color:var(--gold)}
+@media(min-width:561px){
+  #shell.sb-collapsed #sidebar{display:none}
+  #shell.sb-collapsed .sb-expand{display:grid}
+}
+
 /* hamburger toggle (mobile only) + overlay */
 .navtoggle{
   display:none;order:-1;flex:0 0 auto;width:38px;height:38px;border-radius:10px;
@@ -305,7 +324,10 @@ header{
 <div id="shell">
   <aside id="sidebar">
     <div class="sb-head">
-      <div class="sb-brand">History</div>
+      <div class="sb-top">
+        <div class="sb-brand">History</div>
+        <button class="sb-collapse" aria-label="Hide history" title="Hide history" onclick="hideSidebar()">«</button>
+      </div>
       <button class="newchat" onclick="newChat()">
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
         <span id="newChatLabel">New chat</span>
@@ -317,6 +339,7 @@ header{
 <div id="app">
   <header>
     <button class="navtoggle" aria-label="Toggle history" onclick="toggleSidebar()">☰</button>
+    <button id="sbExpand" class="sb-expand" aria-label="Show history" title="Show history" onclick="expandSidebar()">»</button>
     <div class="hdr-glow"></div>
     <div class="hdr-watermark">ﷲ</div>
     <div class="brand">
@@ -873,6 +896,19 @@ renderWelcomeIfEmpty();
     if(sb) sb.classList.remove("open");
     if(ov) ov.classList.remove("show");
   }
+  /* desktop collapse («) / expand (») — remembered across reloads */
+  const SB_KEY="bayyinah.sb.collapsed";
+  function setCollapsed(v){
+    const shell=document.getElementById("shell");
+    if(shell) shell.classList.toggle("sb-collapsed",!!v);
+    try{ localStorage.setItem(SB_KEY, v?"1":"0"); }catch(e){}
+  }
+  function hideSidebar(){
+    // on mobile the « just closes the drawer; on desktop it collapses the rail
+    if(window.matchMedia && window.matchMedia("(max-width:560px)").matches){ closeSidebar(); }
+    else { setCollapsed(true); }
+  }
+  function expandSidebar(){ setCollapsed(false); }
   function syncSidebarLang(){
     const lbl=document.getElementById("newChatLabel");
     if(lbl) lbl.textContent = LANG==="Tamil" ? "புதிய அரட்டை" : "New chat";
@@ -885,11 +921,14 @@ renderWelcomeIfEmpty();
   window.deleteConv=deleteConv;
   window.toggleSidebar=toggleSidebar;
   window.closeSidebar=closeSidebar;
+  window.hideSidebar=hideSidebar;
+  window.expandSidebar=expandSidebar;
   window.renderConvList=renderConvList;
   window.syncSidebarLang=syncSidebarLang;
 
   /* ---- boot ---- */
   lsLoad();
   syncSidebarLang();   // sets label + renders the list
+  try{ if(localStorage.getItem(SB_KEY)==="1") setCollapsed(true); }catch(e){}
 })();
 </script>
