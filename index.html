@@ -510,6 +510,43 @@ function retrieve(terms,k=12){
   return res.slice(0,k).map(r=>r[1]);
 }
 
+/* ---------- APPENDICES (additive retrievable source; never required) ----------
+   Loaded async from appendices.json. Each chunk = one paragraph, tagged with its
+   appendix number + title. Scoring mirrors retrieve() for verses (text×3, title×4). */
+let APX=[];
+async function loadAppendices(){
+  try{
+    const r=await fetch("appendices.json",{cache:"force-cache"});
+    if(!r.ok) return;
+    const data=await r.json();
+    const chunks=[];
+    for(const a of (data||[])){
+      if(!a||!Array.isArray(a.paragraphs)) continue;
+      const title=a.title||("Appendix "+a.n);
+      for(const p of a.paragraphs){ if(p&&String(p).trim()) chunks.push({n:a.n,title:title,text:String(p)}); }
+    }
+    APX=chunks;
+  }catch(e){ APX=[]; }   // additive only — the app works exactly as before if this fails
+}
+loadAppendices();
+function retrieveAppendix(terms,k=3){
+  if(!APX.length) return [];
+  const t=terms.map(x=>x.toLowerCase()).filter(x=>x&&!STOP.has(x));
+  if(!t.length) return [];
+  const res=[];
+  for(const x of APX){
+    const txt=x.text.toLowerCase(), tit=x.title.toLowerCase();
+    let sc=0;
+    for(const w of t){
+      const re=new RegExp("\\b"+w.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"),"g");
+      sc += (txt.match(re)||[]).length*3 + (tit.match(re)||[]).length*4;
+    }
+    if(sc>0) res.push([sc,x]);
+  }
+  res.sort((a,b)=>b[0]-a[0]);
+  return res.slice(0,k).map(r=>r[1]);
+}
+
 /* pull verses by explicit "sura:verse" reference so direct refs never get missed */
 function byRefs(refs){
   const out=[];
@@ -641,7 +678,7 @@ The user may write in Tamil; you MUST still output English search terms (transla
       return;
     }
 
-    let countBlock=null, verses=[];
+    let countBlock=null, verses=[], apx=[];
     if(p.type==="count" && p.count_word){
       const fact=lookupFact(p.count_word);
       if(fact){
@@ -664,6 +701,8 @@ The user may write in Tamil; you MUST still output English search terms (transla
         if(!seen.has(key)){ seen.add(key); verses.push(x); }
       }
       verses=verses.slice(0,14);
+      // additive: also pull the top few relevant appendix paragraphs (never required)
+      try{ apx=retrieveAppendix(p.terms&&p.terms.length?p.terms:text.split(/\s+/),3); }catch(e){ apx=[]; }
     }
 
     // build grounding context
@@ -673,10 +712,11 @@ The user may write in Tamil; you MUST still output English search terms (transla
       if(x.foot) s+=`\nFOOTNOTE: ${x.foot}`;
       return s;
     }).join("\n\n");
+    const apxCtx=apx.map(x=>`[Appendix ${x.n} — ${x.title}] ${x.text}`).join("\n\n");
 
     const sys=`You are Bayyinah, a warm and righteous study assistant for the Quran as translated by Rashad Khalifa ("Quran: The Final Testament"). You use his terminology (God not Allah, Contact Prayers (Salat), the number 19 / mathematical code).
 RULES:
-- Ground every point in the verses and footnotes provided below; cite each with (sura:verse). Do not bring in other translations or outside religious rulings.
+- Ground every point in the verses, footnotes, and any appendix excerpts provided below; cite verses as (sura:verse) and appendix material as "Appendix N". Do not bring in other translations or outside religious rulings.
 - For PERSONAL or ADVICE questions (anger, anxiety, grief, relationships, temptation, etc.): draw out the PRINCIPLES and guidance the provided verses teach and apply them compassionately and practically to the person's situation. You do NOT need a verse that names their exact problem — verses whose principles apply (e.g. restraining anger, patience, forgiveness, trust in God) are enough. Offer gentle, encouraging, righteous counsel rooted in those verses.
 - Only say you cannot help if NONE of the provided verses are even thematically relevant; in that case say so kindly and suggest how to rephrase. Never invent verses or content.
 - Be clear, warm, and concise. Explain reasoning briefly.
@@ -688,7 +728,7 @@ ${countBlock?(countBlock.documented
   : `\nThe exact count has already been computed mechanically: the word "${countBlock.word}" appears ${countBlock.n} times in the English text. ${countBlock.div19?`This IS divisible by 19 (=${countBlock.q19}×19).`:`This is NOT an exact multiple of 19.`} State this number as fact and comment briefly. Do NOT recount yourself.`):""}
 
 PROVIDED VERSES:
-${ctx||"(none found)"}`;
+${ctx||"(none found)"}${apxCtx?`\n\nPROVIDED APPENDIX EXCERPTS (from Dr. Rashad Khalifa's appendices — cite as "Appendix N"):\n${apxCtx}`:""}`;
 
     const ans=await claude([{role:"user",content:text}],sys,1600);
     load.remove();
