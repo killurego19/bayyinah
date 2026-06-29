@@ -322,6 +322,64 @@ header{
   #sideOverlay.show{display:block;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:15}
   html,body{overflow:visible}              /* keep the mobile scroll-freeze fix intact */
 }
+
+/* ===== compact header + language toggle pinned top-right (desktop only) ===== */
+@media(min-width:561px){
+  header{padding:13px 24px 12px;gap:14px}
+  .seal{width:56px;height:56px;flex:0 0 56px}
+  .brand{gap:14px}
+  .title h1{font-size:26px}
+  .titlerow{gap:11px}
+  .titlerow .ar{font-size:30px;padding-left:14px}
+  .title .meaning{margin-top:3px;font-size:13px}
+  .title .sub{margin-top:3px;font-size:9.5px}
+  /* pin the English/Tamil toggle to the top-right corner */
+  .langtoggle{align-self:flex-start;margin-left:auto}
+  .langtoggle button{padding:6px 14px;font-size:13px}
+}
+
+/* ===== mobile: lift the toggle into the top bar so it doesn't take its own row ===== */
+@media(max-width:560px){
+  .langtoggle{
+    position:absolute;top:10px;right:14px;z-index:3;align-self:flex-start;margin:0;
+  }
+  .langtoggle button{padding:5px 11px;font-size:12px;letter-spacing:0}
+  .seal{width:46px;height:46px;flex:0 0 46px}
+  /* only the title row needs to clear the toggle; meaning/subtitle stay full-width */
+  .brand{min-width:0}
+  .titlerow{padding-right:116px}
+}
+
+/* ===== collapsible top section ===== */
+header{transition:padding .28s ease}
+.seal{transition:width .28s ease,height .28s ease,opacity .25s ease,margin .28s ease}
+.title .meaning,.title .sub{transition:max-height .28s ease,opacity .22s ease,margin .28s ease}
+.title h1,.titlerow .ar{transition:font-size .28s ease}
+
+/* the "line with centered label" collapse control */
+.hdr-toggle{
+  display:flex;align-items:center;gap:14px;width:100%;border:0;cursor:pointer;
+  font-family:inherit;padding:6px 24px 7px;
+  background:linear-gradient(180deg,rgba(16,28,23,.55),transparent);
+  border-bottom:1px solid var(--line);color:var(--muted);
+}
+.hdr-toggle .ht-line{flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--line) 30%,var(--line) 70%,transparent)}
+.hdr-toggle .ht-label{display:inline-flex;align-items:center;gap:7px;font-size:10.5px;
+  letter-spacing:.16em;text-transform:uppercase;transition:color .2s}
+.hdr-toggle:hover{color:var(--gold-soft)}
+.hdr-toggle:hover .ht-line{background:linear-gradient(90deg,transparent,rgba(201,162,75,.4) 30%,rgba(201,162,75,.4) 70%,transparent)}
+.hdr-toggle .ht-chev{display:inline-block;font-size:12px;line-height:1;transition:transform .28s ease}
+
+/* collapsed: hero shrinks to a slim bar; toggle + language pills stay */
+.hdr-collapsed header{padding-top:9px;padding-bottom:9px}
+.hdr-collapsed .seal{width:0;height:0;flex-basis:0;opacity:0;margin:0;overflow:hidden}
+.hdr-collapsed .brand{gap:0}
+.hdr-collapsed .title .meaning,
+.hdr-collapsed .title .sub{max-height:0;opacity:0;margin:0;overflow:hidden}
+.hdr-collapsed .title h1{font-size:22px}
+.hdr-collapsed .titlerow .ar{font-size:24px}
+.hdr-collapsed .hdr-watermark{opacity:.03}
+.hdr-collapsed .hdr-toggle .ht-chev{transform:rotate(180deg)}
 </style>
 
 <div id="shell">
@@ -425,6 +483,12 @@ header{
     </div>
   </header>
 
+  <button id="hdrToggle" class="hdr-toggle" onclick="toggleHeader()" aria-expanded="true" aria-label="Hide top section">
+    <span class="ht-line"></span>
+    <span class="ht-label"><span class="ht-chev" aria-hidden="true">⌃</span><span id="hdrToggleText">Hide</span></span>
+    <span class="ht-line"></span>
+  </button>
+
   <div id="chat"></div>
 
   <div class="composer">
@@ -434,7 +498,6 @@ header{
         <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M4 12L20 4L14 20L11 13L4 12Z" fill="#1a1206"/></svg>
       </button>
     </div>
-    <div class="hint" id="hint">Answers are grounded only in the verses retrieved from the text, with citations. Counts are computed exactly.</div>
   </div>
 </div>
 </div>
@@ -459,12 +522,29 @@ function setLang(l){
   document.getElementById("meanEn").style.display = l==="Tamil"?"none":"";
   document.getElementById("meanTa").style.display = l==="Tamil"?"":"none";
   q.placeholder = l==="Tamil"?"குர்ஆன் பற்றி கேளுங்கள்…":"Ask anything about the Quran…";
-  document.getElementById("hint").textContent = l==="Tamil"
-    ? "பதில்கள் மீட்டெடுக்கப்பட்ட வசனங்களை மட்டுமே அடிப்படையாகக் கொண்டவை, மேற்கோள்களுடன். எண்ணிக்கைகள் துல்லியமாகக் கணக்கிடப்படுகின்றன."
-    : "Answers are grounded only in the verses retrieved from the text, with citations. Counts are computed exactly.";
   if(typeof syncSidebarLang==="function") syncSidebarLang();
+  if(typeof refreshHeaderToggle==="function") refreshHeaderToggle();
   renderWelcomeIfEmpty();
 }
+
+/* ---------- collapsible top section (header) ---------- */
+function refreshHeaderToggle(){
+  const collapsed=document.body.classList.contains("hdr-collapsed");
+  const txt=document.getElementById("hdrToggleText");
+  const btn=document.getElementById("hdrToggle");
+  if(txt) txt.textContent = collapsed
+    ? (LANG==="Tamil"?"மேற்பகுதியைக் காட்டு":"Show top section")
+    : (LANG==="Tamil"?"மேற்பகுதியை மறை":"Hide top section");
+  if(btn){ btn.setAttribute("aria-expanded", collapsed?"false":"true");
+    btn.setAttribute("aria-label", collapsed?"Show top section":"Hide top section"); }
+}
+function setHeaderCollapsed(v){
+  document.body.classList.toggle("hdr-collapsed", !!v);
+  refreshHeaderToggle();
+  try{ localStorage.setItem("bayyinah.hdr.collapsed", v?"1":"0"); }catch(e){}
+}
+function toggleHeader(){ setHeaderCollapsed(!document.body.classList.contains("hdr-collapsed")); }
+try{ if(localStorage.getItem("bayyinah.hdr.collapsed")==="1") setHeaderCollapsed(true); else refreshHeaderToggle(); }catch(e){ refreshHeaderToggle(); }
 
 /* ---------- exact word count over the text ---------- */
 function countWord(word){
