@@ -499,7 +499,7 @@ The user may write in Tamil; you MUST still output English search terms (transla
 
 "chat" = a greeting, thanks, farewell, or small talk that is NOT a request for Quranic content (e.g. "Salaam", "hi", "thank you", "how are you", "வணக்கம்"). For chat, terms=[] and refs=[].
 
-"count" = asks how many times a specific word appears (e.g. "how many times is God mentioned", "count of the word mercy"). Put the singular English word in count_word (e.g. "God","mercy","Moses","Most Gracious","Most Merciful").
+"count" = ONLY when the user explicitly asks for the NUMBER of times a specific word appears (e.g. "how many times is God mentioned", "count of the word mercy", "how often does Moses appear"). The request must be primarily a tally. If the user asks for advice, a list, an explanation, or guidance and merely MENTIONS a word like God/Allah/mercy, classify it as "topic", NOT "count". Requests such as "give me advice", "top 10 ...", "explain ...", "what does the Quran say about ..." are ALWAYS "topic", even when they contain countable words. Put the singular English word in count_word only for genuine count requests.
 
 "topic" = ANY question seeking explanation, lookup, doubt-clearing, OR personal/life/spiritual advice. Provide 5-12 English search terms as SINGLE words.
 - CRITICAL for advice/personal questions: translate the EMOTION or SITUATION into the spiritual CONCEPTS the Quran addresses, not the literal words. 
