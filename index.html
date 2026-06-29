@@ -337,6 +337,18 @@ header{
   .langtoggle{align-self:flex-start;margin-left:auto}
   .langtoggle button{padding:6px 14px;font-size:13px}
 }
+
+/* ===== mobile: lift the toggle into the top bar so it doesn't take its own row ===== */
+@media(max-width:560px){
+  .langtoggle{
+    position:absolute;top:10px;right:14px;z-index:3;align-self:flex-start;margin:0;
+  }
+  .langtoggle button{padding:5px 11px;font-size:12px;letter-spacing:0}
+  .seal{width:46px;height:46px;flex:0 0 46px}
+  /* only the title row needs to clear the toggle; meaning/subtitle stay full-width */
+  .brand{min-width:0}
+  .titlerow{padding-right:116px}
+}
 </style>
 
 <div id="shell">
