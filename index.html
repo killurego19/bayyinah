@@ -233,10 +233,90 @@ header{
   /* the actual freeze fix — releases the page so it can scroll */
   html,body{overflow:visible}
 }
+
+/* ===== conversation history sidebar ===== */
+#shell{display:flex;height:100vh;width:100%}
+#app{flex:1 1 auto;min-width:0}
+
+#sidebar{
+  flex:0 0 266px;width:266px;height:100vh;display:flex;flex-direction:column;
+  background:linear-gradient(180deg,var(--ink2),var(--ink));
+  border-right:1px solid var(--line);position:relative;z-index:20;
+}
+.sb-head{padding:16px 14px 12px;border-bottom:1px solid var(--line)}
+.sb-brand{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);
+  margin:0 0 11px 2px;font-family:"Cormorant Garamond",serif}
+.newchat{
+  width:100%;display:flex;align-items:center;justify-content:center;gap:9px;
+  border:1px solid var(--line);border-radius:12px;cursor:pointer;font-family:inherit;
+  background:linear-gradient(160deg,rgba(201,162,75,.18),rgba(79,174,135,.10));
+  color:var(--parch);font-size:14.5px;letter-spacing:.02em;padding:11px 14px;transition:.2s;
+}
+.newchat:hover{border-color:var(--gold);color:#fff;transform:translateY(-1px);
+  box-shadow:0 7px 20px -12px rgba(201,162,75,.7)}
+.newchat svg{width:16px;height:16px;flex:0 0 16px}
+
+.sb-list{flex:1;overflow-y:auto;padding:8px 8px 18px}
+.sb-list::-webkit-scrollbar{width:8px}
+.sb-list::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px}
+.sb-empty{color:var(--muted);font-size:12.5px;text-align:center;padding:22px 12px;opacity:.7}
+
+.conv{
+  position:relative;display:flex;align-items:center;
+  padding:9px 32px 9px 11px;margin:2px 0;border-radius:10px;cursor:pointer;
+  color:var(--parch-dim);border:1px solid transparent;transition:.15s;
+}
+.conv:hover{background:var(--panel);border-color:var(--line)}
+.conv.active{background:var(--panel2);border-color:var(--gold);color:var(--parch)}
+.conv-title{flex:1;min-width:0;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.conv-del{
+  position:absolute;right:6px;top:50%;transform:translateY(-50%);
+  border:0;background:transparent;color:var(--muted);cursor:pointer;
+  width:24px;height:24px;border-radius:7px;display:none;place-items:center;transition:.15s;
+}
+.conv-del svg{width:14px;height:14px}
+.conv:hover .conv-del,.conv.active .conv-del{display:grid}
+.conv-del:hover{background:rgba(255,90,90,.16);color:#ff7a7a}
+
+/* hamburger toggle (mobile only) + overlay */
+.navtoggle{
+  display:none;order:-1;flex:0 0 auto;width:38px;height:38px;border-radius:10px;
+  border:1px solid var(--line);background:rgba(19,33,27,.85);color:var(--gold-soft);
+  cursor:pointer;font-size:18px;line-height:1;place-items:center;position:relative;z-index:1;
+}
+.navtoggle:hover{border-color:var(--gold)}
+#sideOverlay{display:none}
+
+@media(max-width:560px){
+  #shell{display:block;height:auto}          /* let the app flow so body can scroll */
+  #app{height:auto;min-height:100dvh;min-height:100vh}
+  #sidebar{
+    position:fixed;top:0;left:0;bottom:0;height:100%;width:84%;max-width:300px;
+    transform:translateX(-100%);transition:transform .25s ease;
+    box-shadow:0 0 46px rgba(0,0,0,.65);
+  }
+  #sidebar.open{transform:none}
+  .navtoggle{display:grid}
+  #sideOverlay.show{display:block;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:15}
+  html,body{overflow:visible}              /* keep the mobile scroll-freeze fix intact */
+}
 </style>
 
+<div id="shell">
+  <aside id="sidebar">
+    <div class="sb-head">
+      <div class="sb-brand">History</div>
+      <button class="newchat" onclick="newChat()">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span id="newChatLabel">New chat</span>
+      </button>
+    </div>
+    <div class="sb-list" id="convList"></div>
+  </aside>
+  <div id="sideOverlay" onclick="closeSidebar()"></div>
 <div id="app">
   <header>
+    <button class="navtoggle" aria-label="Toggle history" onclick="toggleSidebar()">☰</button>
     <div class="hdr-glow"></div>
     <div class="hdr-watermark">ﷲ</div>
     <div class="brand">
@@ -331,6 +411,7 @@ header{
     <div class="hint" id="hint">Answers are grounded only in the verses retrieved from the text, with citations. Counts are computed exactly.</div>
   </div>
 </div>
+</div>
 
 <script>const SURA_NAMES=["Al-Faatihah (The Key)","Al-Baqarah (The Heifer)","Aal-'Imraan (The Amramites)","Al-Nisaa' (The Women)","Al-Maa'edah (The Feast)","Al-An'aam (Livestock)","Al-A'raaf (The Purgatory)","Al-Anfaal (The Spoils)","Al-Tawbah (Repentance)","Yoonus (Jonah)","Hood","Yousuf (Joseph)","Al-Ra'd (Thunder)","Ibraaheem (Abraham)","Al-Hijr","Al-Nahl (The Bee)","Bani Israa'eel (Children of Israel)","Al-Kahf (The Cave)","Maryam (Mary)","Taa Haa","Al-Anbiyaa' (The Prophets)","Al-Hajj (Pilgrimage)","Al-Mu'minoon (The Believers)","Al-Noor (The Light)","Al-Furqaan (The Statute Book)","Al-Shu'araa' (The Poets)","Al-Naml (The Ant)","Al-Qasas (History)","Al-'Ankaboot (The Spider)","Al-Room (The Romans)","Luqmaan","Al-Sajdah (Prostration)","Al-Ahzaab (The Parties)","Saba'","Faater (Initiator)","Yaa Seen","Al-Saaffaat (The Arrangers)","Saad","Al-Zumar (The Throngs)","Ghaafer (Forgiver)","Fussilat (Detailed)","Al-Shoora (Consultation)","Al-Zukhruf (Ornaments)","Al-Dukhaan (Smoke)","Al-Jaathiyah (Kneeling)","Al-Ahqaaf (The Dunes)","Muhammad","Al-Fat-h (Victory)","Al-Hujuraat (The Walls)","Qaaf","Al-Zaariyaat (Drivers of the Winds)","Al-Toor (Mount Sinai)","Al-Najm (The Stars)","Al-Qamar (The Moon)","Al-Rahmaan (Most Gracious)","Al-Waaqe'ah (The Inevitable)","Al-Hadeed (Iron)","Al-Mujaadalah (The Debate)","Al-Hashr (Exodus)","Al-Mumtahanah (The Test)","Al-Saff (The Column)","Al-Jumu'ah (Friday)","Al-Munaafeqoon (The Hypocrites)","Al-Taghaabun (Mutual Blaming)","Al-Talaaq (Divorce)","Al-Tahreem (Prohibition)","Al-Mulk (Kingship)","Al-Qalam (The Pen)","Al-Haaqqah (The Inevitable)","Al-Ma'aarej (The Heights)","Nooh (Noah)","Al-Jinn","Al-Muzzammil (Cloaked)","Al-Muddaththir (The Hidden Secret)","Al-Qeyaamah (Resurrection)","Al-Insaan (The Human)","Al-Mursalaat (Dispatched)","Al-Naba' (The Event)","Al-Naaze'aat (The Snatchers)","'Abasa (He Frowned)","Al-Takweer (The Rolling)","Al-Infitaar (The Shattering)","Al-Mutaffifeen (The Cheaters)","Al-Inshiqaaq (The Rupture)","Al-Burooj (The Galaxies)","Al-Taareq (The Bright Star)","Al-A'laa (Most High)","Al-Ghaasheyah (Overwhelming)","Al-Fajr (Dawn)","Al-Balad (The Town)","Al-Shams (The Sun)","Al-Layl (The Night)","Al-Duhaa (The Forenoon)","Al-Sharh (Cooling the Temper)","Al-Teen (The Fig)","Al-'Alaq (The Embryo)","Al-Qadr (Destiny)","Al-Bayyinah (The Proof)","Al-Zalzalah (The Quake)","Al-'Aadeyaat (The Gallopers)","Al-Qaare'ah (The Shocker)","Al-Takaathur (Hoarding)","Al-'Asr (The Afternoon)","Al-Humazah (The Backbiter)","Al-Feel (The Elephant)","Quraysh","Al-Maa'oon (Charity)","Al-Kawthar (Bounty)","Al-Kaaferoon (The Disbelievers)","Al-Nasr (Triumph)","Al-Masad (Thorns)","Al-Ikhlaas (Absoluteness)","Al-Falaq (Daybreak)","Al-Naas (The People)"];
 </script>
@@ -355,6 +436,7 @@ function setLang(l){
   document.getElementById("hint").textContent = l==="Tamil"
     ? "பதில்கள் மீட்டெடுக்கப்பட்ட வசனங்களை மட்டுமே அடிப்படையாகக் கொண்டவை, மேற்கோள்களுடன். எண்ணிக்கைகள் துல்லியமாகக் கணக்கிடப்படுகின்றன."
     : "Answers are grounded only in the verses retrieved from the text, with citations. Counts are computed exactly.";
+  if(typeof syncSidebarLang==="function") syncSidebarLang();
   renderWelcomeIfEmpty();
 }
 
@@ -655,4 +737,159 @@ function renderWelcomeIfEmpty(){
 q.addEventListener("input",()=>{q.style.height="auto";q.style.height=Math.min(q.scrollHeight,130)+"px";});
 q.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();ask();}});
 renderWelcomeIfEmpty();
+
+/* ===================================================================
+   Conversation history — client-side only (localStorage).
+   Re-uses the existing addUser / addAnswer / clearWelcome /
+   renderWelcomeIfEmpty rendering path so verse cards, count cards,
+   citations and Tamil formatting all keep working unchanged.
+   =================================================================== */
+(function(){
+  const LS_KEY="bayyinah.history.v1";
+  const MAX_CONVS=50;
+  let CONVS=[];               // [{id,title,lang,timestamp,messages:[...]}]
+  let currentConvId=null;     // null === fresh "new chat" (unsaved until first question)
+  let isRestoring=false;      // suppress recording while we replay a saved chat
+
+  /* ---- storage (all wrapped: app must still work if storage fails) ---- */
+  function lsLoad(){
+    try{
+      const raw=localStorage.getItem(LS_KEY);
+      const parsed=raw?JSON.parse(raw):[];
+      CONVS=Array.isArray(parsed)?parsed:[];
+    }catch(e){ CONVS=[]; }
+  }
+  function lsSave(){
+    try{
+      CONVS.sort((a,b)=>(b.timestamp||0)-(a.timestamp||0));
+      if(CONVS.length>MAX_CONVS) CONVS=CONVS.slice(0,MAX_CONVS);
+      localStorage.setItem(LS_KEY,JSON.stringify(CONVS));
+    }catch(e){ /* storage full or disabled — keep running in-memory */ }
+  }
+  function genId(){ return Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,8); }
+  function getCurrentConv(){ return CONVS.find(c=>c.id===currentConvId)||null; }
+  function truncateTitle(t){
+    t=(t||"").replace(/\s+/g," ").trim();
+    if(!t) return LANG==="Tamil"?"புதிய அரட்டை":"New chat";
+    return t.length>40 ? t.slice(0,40).trim()+"…" : t;
+  }
+
+  /* ---- recording: wrap addUser/addAnswer so every turn is captured ---- */
+  const _addUser=addUser, _addAnswer=addAnswer;
+  addUser=function(t){
+    _addUser(t);
+    if(isRestoring) return;
+    if(!currentConvId){
+      const conv={id:genId(), title:truncateTitle(t), lang:LANG, timestamp:Date.now(), messages:[]};
+      CONVS.push(conv); currentConvId=conv.id;
+    }
+    const conv=getCurrentConv(); if(!conv) return;
+    conv.messages.push({role:"user", text:t});
+    conv.timestamp=Date.now();
+    lsSave(); renderConvList();
+  };
+  addAnswer=function(text,verses,countBlock){
+    _addAnswer(text,verses,countBlock);
+    if(isRestoring) return;
+    const conv=getCurrentConv(); if(!conv) return;
+    conv.messages.push({role:"answer", text:text, verses:verses||[], countBlock:countBlock||null});
+    conv.timestamp=Date.now();
+    lsSave(); renderConvList();
+  };
+
+  /* ---- sidebar rendering ---- */
+  function renderConvList(){
+    const list=document.getElementById("convList"); if(!list) return;
+    const items=CONVS.slice().sort((a,b)=>(b.timestamp||0)-(a.timestamp||0));
+    list.innerHTML="";
+    if(!items.length){
+      const e=document.createElement("div"); e.className="sb-empty";
+      e.textContent = LANG==="Tamil" ? "இதுவரை உரையாடல்கள் இல்லை" : "No conversations yet";
+      list.appendChild(e); return;
+    }
+    for(const c of items){
+      const row=document.createElement("div");
+      row.className="conv"+(c.id===currentConvId?" active":"");
+      row.onclick=function(){ loadConv(c.id); };
+
+      const title=document.createElement("div");
+      title.className="conv-title"+(isTamil(c.title)?" tamil":"");
+      title.textContent=c.title||"…";
+
+      const del=document.createElement("button");
+      del.className="conv-del"; del.setAttribute("aria-label","Delete conversation");
+      del.title = LANG==="Tamil" ? "நீக்கு" : "Delete";
+      del.innerHTML='<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 7h14M9 7V5h6v2M7 7l1 12h8l1-12" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      del.onclick=function(e){ e.stopPropagation(); deleteConv(c.id); };
+
+      row.appendChild(title); row.appendChild(del);
+      list.appendChild(row);
+    }
+  }
+
+  /* ---- actions ---- */
+  function loadConv(id){
+    const conv=CONVS.find(c=>c.id===id); if(!conv) return;
+    currentConvId=id;
+    if(conv.lang && conv.lang!==LANG) setLang(conv.lang);   // restore the chat's language
+    chat.innerHTML="";
+    isRestoring=true;
+    try{
+      for(const m of conv.messages){
+        if(m.role==="user") addUser(m.text);
+        else addAnswer(m.text, m.verses||[], m.countBlock||null);
+      }
+    } finally { isRestoring=false; }
+    if(!conv.messages.length) renderWelcomeIfEmpty();
+    renderConvList();
+    closeSidebar();
+    scroll();
+  }
+  function newChat(){
+    currentConvId=null;
+    chat.innerHTML="";
+    renderWelcomeIfEmpty();
+    renderConvList();
+    closeSidebar();
+    try{ q.value=""; q.style.height="auto"; }catch(e){}
+  }
+  function deleteConv(id){
+    const i=CONVS.findIndex(c=>c.id===id); if(i<0) return;
+    const conv=CONVS[i];
+    const label=conv&&conv.title?('"'+conv.title+'"'):"this conversation";
+    if(!window.confirm((LANG==="Tamil"?"இந்த உரையாடலை நீக்கவா? ":"Delete ")+label+"?")) return;
+    CONVS.splice(i,1); lsSave();
+    if(currentConvId===id) newChat(); else renderConvList();
+  }
+
+  /* ---- mobile drawer ---- */
+  function toggleSidebar(){
+    const sb=document.getElementById("sidebar"), ov=document.getElementById("sideOverlay");
+    if(sb) sb.classList.toggle("open");
+    if(ov) ov.classList.toggle("show");
+  }
+  function closeSidebar(){
+    const sb=document.getElementById("sidebar"), ov=document.getElementById("sideOverlay");
+    if(sb) sb.classList.remove("open");
+    if(ov) ov.classList.remove("show");
+  }
+  function syncSidebarLang(){
+    const lbl=document.getElementById("newChatLabel");
+    if(lbl) lbl.textContent = LANG==="Tamil" ? "புதிய அரட்டை" : "New chat";
+    renderConvList();
+  }
+
+  /* expose the handlers referenced by inline onclick / setLang */
+  window.newChat=newChat;
+  window.loadConv=loadConv;
+  window.deleteConv=deleteConv;
+  window.toggleSidebar=toggleSidebar;
+  window.closeSidebar=closeSidebar;
+  window.renderConvList=renderConvList;
+  window.syncSidebarLang=syncSidebarLang;
+
+  /* ---- boot ---- */
+  lsLoad();
+  syncSidebarLang();   // sets label + renders the list
+})();
 </script>
