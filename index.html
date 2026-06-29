@@ -531,6 +531,12 @@ const TOPIC_HINTS=[
     topic:"Female infanticide — the buried infant girl",
     keywords:["buried alive","infanticide","girl child","female child","female infant","baby girl","killed daughter","சிறுமி","பெண் குழந்தை","உயிரோடு புதைக்க","பெண் சிசு"],
     refs:["81:8","81:9","16:58","16:59","17:31"]
+  },
+  {
+    topic:"The number 19 — the Quran's mathematical code",
+    keywords:["number 19","19 code","mathematical code","mathematical miracle","nineteen","significance of 19","significance of the number 19","why 19","what is 19","over it is nineteen",
+              "19 எண்","பத்தொன்பது","19 இன் முக்கிய","கணித அதிசயம்","கணித குறியீடு","19 எண்ணின்"],
+    refs:["74:30","74:31","74:32","74:33","74:34","74:35","1:1"]
   }
   // ── add more hints here, same format ──
 ];
@@ -674,6 +680,8 @@ RULES:
 - For PERSONAL or ADVICE questions (anger, anxiety, grief, relationships, temptation, etc.): draw out the PRINCIPLES and guidance the provided verses teach and apply them compassionately and practically to the person's situation. You do NOT need a verse that names their exact problem — verses whose principles apply (e.g. restraining anger, patience, forgiveness, trust in God) are enough. Offer gentle, encouraging, righteous counsel rooted in those verses.
 - Only say you cannot help if NONE of the provided verses are even thematically relevant; in that case say so kindly and suggest how to rephrase. Never invent verses or content.
 - Be clear, warm, and concise. Explain reasoning briefly.
+- Write ALL numbers as digits (e.g. 19, 6346, 1:1). NEVER spell numbers out as words in any language.
+- Do NOT repeat the same sentence, phrase, or point. No filler or padding. If the provided material does not actually answer the question, say so in ONE short sentence instead of repeating yourself.
 - Respond ENTIRELY in ${LANG==="Tamil"?"Tamil (தமிழ்)":"English"}.
 ${countBlock?(countBlock.documented
   ? `\nThis is a documented count from Dr. Rashad Khalifa's published research: the word "${countBlock.word}" occurs ${countBlock.n} times in the Quran${countBlock.claim&&countBlock.claim!=="—"?` (${countBlock.claim})`:""}. State this number as Dr. Khalifa's documented figure. Briefly note its place in the 19-based mathematical code. Do NOT recount or contradict it.`

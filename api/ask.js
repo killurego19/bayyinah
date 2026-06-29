@@ -10,7 +10,7 @@
 // Required env var:  GEMINI_API_KEY
 // Optional env var:  GROQ_API_KEY   (enables the fallback; get a free key at console.groq.com)
 
-const GEMINI_MODEL = "gemini-2.5-flash-lite";
+const GEMINI_MODEL = "gemini-2.5-flash";
 const GROQ_MODEL   = "llama-3.1-8b-instant"; // free, fast, 14,400 req/day
 
 // ---- simple in-memory cache (per warm serverless instance) ----
