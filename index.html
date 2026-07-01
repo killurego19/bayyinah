@@ -331,37 +331,11 @@ header{
   .titlerow{padding-right:116px}
 }
 
-/* ===== collapsible top section ===== */
-header{transition:padding .28s ease}
-.seal{transition:width .28s ease,height .28s ease,opacity .25s ease,margin .28s ease}
-.title .meaning,.title .sub{transition:max-height .28s ease,opacity .22s ease,margin .28s ease}
-.title h1,.titlerow .ar{transition:font-size .28s ease}
-
-/* the "line with centered label" collapse control */
-.hdr-toggle{
-  display:flex;align-items:center;gap:14px;width:100%;border:0;cursor:pointer;
-  font-family:inherit;padding:6px 24px 7px;
-  background:linear-gradient(180deg,rgba(16,28,23,.55),transparent);
-  border-bottom:1px solid var(--line);color:var(--muted);
+/* ===== mobile: auto-hide header on scroll down, reveal on scroll up ===== */
+@media(max-width:560px){
+  header{position:sticky;top:0;z-index:12;transition:transform .3s ease;will-change:transform}
+  header.hdr-hidden{transform:translateY(-100%)}
 }
-.hdr-toggle .ht-line{flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--line) 30%,var(--line) 70%,transparent)}
-.hdr-toggle .ht-label{display:inline-flex;align-items:center;gap:7px;font-size:10.5px;
-  letter-spacing:.16em;text-transform:uppercase;transition:color .2s}
-.hdr-toggle:hover{color:var(--gold-soft)}
-.hdr-toggle:hover .ht-line{background:linear-gradient(90deg,transparent,rgba(201,162,75,.4) 30%,rgba(201,162,75,.4) 70%,transparent)}
-.hdr-toggle .ht-chev{display:inline-block;font-size:12px;line-height:1;transition:transform .28s ease}
-
-/* collapsed: hero shrinks to a slim bar; toggle + language pills stay */
-.hdr-collapsed header{padding-top:9px;padding-bottom:9px}
-/* keep the logo (it's the sidebar toggle) — just shrink it */
-.hdr-collapsed .seal{width:34px;height:34px;flex-basis:34px}
-.hdr-collapsed .brand{gap:11px}
-.hdr-collapsed .title .meaning,
-.hdr-collapsed .title .sub{max-height:0;opacity:0;margin:0;overflow:hidden}
-.hdr-collapsed .title h1{font-size:22px}
-.hdr-collapsed .titlerow .ar{font-size:24px}
-.hdr-collapsed .hdr-watermark{opacity:.03}
-.hdr-collapsed .hdr-toggle .ht-chev{transform:rotate(180deg)}
 </style>
 
 <div id="shell">
@@ -460,12 +434,6 @@ header{transition:padding .28s ease}
     </div>
   </header>
 
-  <button id="hdrToggle" class="hdr-toggle" onclick="toggleHeader()" aria-expanded="true" aria-label="Hide top section">
-    <span class="ht-line"></span>
-    <span class="ht-label"><span class="ht-chev" aria-hidden="true">⌃</span><span id="hdrToggleText">Hide</span></span>
-    <span class="ht-line"></span>
-  </button>
-
   <div id="chat"></div>
 
   <div class="composer">
@@ -500,28 +468,28 @@ function setLang(l){
   document.getElementById("meanTa").style.display = l==="Tamil"?"":"none";
   q.placeholder = l==="Tamil"?"குர்ஆன் பற்றி கேளுங்கள்…":"Ask anything about the Quran…";
   if(typeof syncSidebarLang==="function") syncSidebarLang();
-  if(typeof refreshHeaderToggle==="function") refreshHeaderToggle();
   renderWelcomeIfEmpty();
 }
 
-/* ---------- collapsible top section (header) ---------- */
-function refreshHeaderToggle(){
-  const collapsed=document.body.classList.contains("hdr-collapsed");
-  const txt=document.getElementById("hdrToggleText");
-  const btn=document.getElementById("hdrToggle");
-  if(txt) txt.textContent = collapsed
-    ? (LANG==="Tamil"?"மேற்பகுதியைக் காட்டு":"Show top section")
-    : (LANG==="Tamil"?"மேற்பகுதியை மறை":"Hide top section");
-  if(btn){ btn.setAttribute("aria-expanded", collapsed?"false":"true");
-    btn.setAttribute("aria-label", collapsed?"Show top section":"Hide top section"); }
-}
-function setHeaderCollapsed(v){
-  document.body.classList.toggle("hdr-collapsed", !!v);
-  refreshHeaderToggle();
-  try{ localStorage.setItem("bayyinah.hdr.collapsed", v?"1":"0"); }catch(e){}
-}
-function toggleHeader(){ setHeaderCollapsed(!document.body.classList.contains("hdr-collapsed")); }
-try{ if(localStorage.getItem("bayyinah.hdr.collapsed")==="1") setHeaderCollapsed(true); else refreshHeaderToggle(); }catch(e){ refreshHeaderToggle(); }
+/* ---------- mobile: hide header on scroll down, reveal on scroll up ---------- */
+(function(){
+  const header=document.querySelector("header");
+  if(!header) return;
+  const THRESH=6;                       // ignore tiny jitters
+  let lastY=window.scrollY||0, ticking=false;
+  function isMobile(){ return window.matchMedia("(max-width:560px)").matches; }
+  function update(){
+    ticking=false;
+    if(!isMobile()){ header.classList.remove("hdr-hidden"); lastY=window.scrollY||0; return; }
+    const y=window.scrollY||document.documentElement.scrollTop||0;
+    const dy=y-lastY;
+    if(Math.abs(dy)<THRESH) return;     // accumulate small moves
+    if(dy>0 && y>header.offsetHeight) header.classList.add("hdr-hidden");   // down → hide
+    else if(dy<0) header.classList.remove("hdr-hidden");                    // up → reveal
+    lastY=y;
+  }
+  window.addEventListener("scroll",function(){ if(!ticking){ requestAnimationFrame(update); ticking=true; } },{passive:true});
+})();
 
 /* ---------- exact word count over the text ---------- */
 function countWord(word){
