@@ -11,7 +11,7 @@
 // Optional env var:  GROQ_API_KEY   (enables the fallback; get a free key at console.groq.com)
 
 const GEMINI_MODEL = "gemini-2.5-flash";
-const GROQ_MODEL   = "llama-3.1-8b-instant"; // free, fast, 14,400 req/day
+const GROQ_MODEL   = "llama-3.3-70b-versatile"; // free fallback; far stronger multilingual/Tamil than 8b
 
 // ---- simple in-memory cache (per warm serverless instance) ----
 // Keyed by the exact request. Lives ~30 min. Repeated popular questions cost 0 API calls.

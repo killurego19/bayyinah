@@ -925,14 +925,22 @@ function addAnswer(text,verses,countBlock){
     html+=`<div class="verses"><div class="vh">${LANG==="Tamil"?"மேற்கோள் காட்டப்பட்ட வசனங்கள்":"Cited Verses"}</div>`;
     for(const x of verses){
       const nm=SURA_NAMES[x.s-1]||("Sura "+x.s);
-      html+=`<div class="verse"><div class="ref">${x.s}:${x.v} — ${esc(nm)}</div>`;
+      const key=x.s+":"+x.v;
+      const taE=(LANG==="Tamil"&&typeof TAM!=="undefined"&&TAM)?TAM[key]:null;
+      const vt=(taE&&taE.t)?taE.t:x.text;
+      html+=`<div class="verse" data-ref="${key}"><div class="ref">${x.s}:${x.v} — ${esc(nm)}</div>`;
       if(x.title) html+=`<div class="vtitle">${esc(x.title)}</div>`;
-      html+=`<div class="vt">${esc(x.text)}</div></div>`;
+      html+=`<div class="vt${(taE&&taE.t)?' tamil':''}">${esc(vt)}</div></div>`;
     }
     html+=`</div>`;
   }
   html+=`</div></div>`;
   d.innerHTML=html; chat.appendChild(d); scrollToEl(d);
+  // in Tamil, show cited verses in Tamil (load the translation lazily if needed)
+  if(LANG==="Tamil" && verses && verses.length && typeof applyTamilVerses==="function"){
+    if(TAM) applyTamilVerses(d);
+    else if(typeof loadTamil==="function") loadTamil().then(()=>applyTamilVerses(d));
+  }
 }
 function fmt(t){
   return esc(t)
@@ -1045,6 +1053,14 @@ async function loadTamil(){
   if(TAM) return TAM;
   try{ const r=await fetch("quran-ta.json"); if(r.ok) TAM=await r.json(); }catch(e){}
   return TAM;
+}
+/* swap cited-verse text to Tamil inside a rendered chat answer (used by addAnswer) */
+function applyTamilVerses(root){
+  if(!(LANG==="Tamil" && TAM) || !root) return;
+  root.querySelectorAll(".verse[data-ref]").forEach(el=>{
+    const e=TAM[el.getAttribute("data-ref")];
+    if(e && e.t){ const vt=el.querySelector(".vt"); if(vt){ vt.textContent=e.t; vt.classList.add("tamil"); } }
+  });
 }
 function updateArabicBtn(){
   const b=document.getElementById("rdArabic"); if(!b) return;
