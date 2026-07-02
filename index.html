@@ -356,6 +356,60 @@ header{
   header{position:sticky;top:0;z-index:12;transition:transform .3s ease;will-change:transform}
   header.hdr-hidden{transform:translateY(-100%)}
 }
+
+/* ===== Ask / Read mode + Quran reader ===== */
+.modebar{display:flex;justify-content:center;gap:7px;padding:9px 14px 4px}
+.modetab{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);
+  background:rgba(19,33,27,.6);color:var(--muted);font-family:"Cormorant Garamond",serif;
+  font-size:14.5px;letter-spacing:.02em;padding:7px 20px;border-radius:11px;cursor:pointer;transition:.2s}
+.modetab svg{width:15px;height:15px}
+.modetab:hover{color:var(--parch);border-color:var(--gold)}
+.modetab.on{background:var(--panel2);border-color:var(--emerald);color:var(--gold-soft)}
+
+#reader{display:none;flex:1;overflow-y:auto;flex-direction:column;scroll-behavior:smooth}
+.reading #chat,.reading .composer{display:none}
+.reading #reader{display:flex}
+#reader::-webkit-scrollbar{width:9px}
+#reader::-webkit-scrollbar-thumb{background:var(--line);border-radius:9px}
+
+.rd-bar{display:flex;align-items:center;gap:10px;max-width:760px;width:100%;margin:14px auto 4px;padding:0 16px}
+.rd-nav{flex:0 0 auto;width:38px;height:38px;border-radius:10px;border:1px solid var(--line);
+  background:rgba(19,33,27,.7);color:var(--gold-soft);cursor:pointer;display:grid;place-items:center;transition:.2s}
+.rd-nav:hover{border-color:var(--gold)}
+.rd-nav svg{width:18px;height:18px}
+.rd-pick{flex:1}
+#rdSura{width:100%;background:var(--panel);border:1px solid var(--line);color:var(--parch);
+  font-family:"Cormorant Garamond",serif;font-size:15px;padding:9px 12px;border-radius:12px;cursor:pointer;text-align:center;text-align-last:center}
+#rdSura:focus{outline:0;border-color:var(--gold)}
+
+.rd-verses{max-width:760px;width:100%;margin:0 auto;padding:10px 16px 40px}
+.rd-suratitle{text-align:center;margin:4px 0 14px}
+.rd-suratitle .en{font-family:"Cormorant Garamond",serif;font-size:16px;color:var(--muted);letter-spacing:.02em}
+.rd-basmala{text-align:center;font-family:"Amiri",serif;font-size:23px;color:var(--gold-soft);opacity:.92;direction:rtl;margin:0 0 4px}
+.rd-basmala-en{text-align:center;font-family:"Spectral",Georgia,serif;font-size:13.5px;color:var(--muted);margin:0 0 20px;font-style:italic}
+.rd-nobasmala{text-align:center;font-family:"Cormorant Garamond",serif;font-style:italic;font-size:14.5px;color:var(--muted);margin:2px 0 6px}
+.rd-section{font-style:italic;color:var(--emerald);font-size:15px;text-align:center;font-family:"Cormorant Garamond",serif;margin:22px 0 8px}
+.rd-verse{display:flex;gap:13px;padding:12px 4px;border-bottom:1px solid rgba(36,66,56,.45)}
+.rd-vnum{flex:0 0 auto;height:24px;padding:0 9px;border-radius:999px;background:rgba(201,162,75,.13);
+  color:var(--gold-soft);font-family:"Cormorant Garamond",serif;font-weight:600;font-size:12.5px;display:inline-flex;align-items:center}
+.rd-vbody{flex:1;min-width:0}
+.rd-vtext{font-size:16.5px;line-height:1.72;color:var(--text)}
+.rd-foot{margin-top:8px}
+.rd-foot-btn{display:inline-flex;align-items:center;gap:6px;font-size:12px;letter-spacing:.02em;
+  color:var(--muted);background:none;border:0;cursor:pointer;padding:2px 0;font-family:"Cormorant Garamond",serif}
+.rd-foot-btn:hover{color:var(--gold-soft)}
+.rd-foot-btn .cv{display:inline-block;transition:transform .2s}
+.rd-foot.open .rd-foot-btn .cv{transform:rotate(90deg)}
+.rd-foot-text{margin-top:6px;font-size:14px;line-height:1.62;color:var(--parch-dim);
+  border-left:2px solid var(--gold);padding:3px 0 3px 12px;display:none;white-space:pre-wrap}
+.rd-foot.open .rd-foot-text{display:block}
+
+@media(max-width:560px){
+  #reader{overflow-y:visible}
+  .rd-bar{margin-top:10px}
+  .rd-verses{padding:8px 14px 40px}
+  .rd-vtext{font-size:16px}
+}
 </style>
 
 <div id="shell">
@@ -458,7 +512,27 @@ header{
     </div>
   </header>
 
+  <div class="modebar" role="tablist" aria-label="Mode">
+    <button id="tabAsk" class="modetab on" role="tab" aria-selected="true" onclick="setMode('ask')">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 5h16v11H8l-4 4V5z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+      <span class="lbl">Ask</span>
+    </button>
+    <button id="tabRead" class="modetab" role="tab" aria-selected="false" onclick="setMode('read')">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H12v16H6.5A2.5 2.5 0 0 0 4 21.5V5.5zM20 5.5A2.5 2.5 0 0 0 17.5 3H12v16h5.5A2.5 2.5 0 0 1 20 21.5V5.5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+      <span class="lbl">Read</span>
+    </button>
+  </div>
+
   <div id="chat"></div>
+
+  <div id="reader" aria-hidden="true">
+    <div class="rd-bar">
+      <button class="rd-nav" id="rdPrev" aria-label="Previous sura"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <div class="rd-pick"><select id="rdSura" aria-label="Select sura"></select></div>
+      <button class="rd-nav" id="rdNext" aria-label="Next sura"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+    <div class="rd-verses" id="rdVerses"></div>
+  </div>
 
   <div class="composer">
     <div class="cwrap">
@@ -492,6 +566,7 @@ function setLang(l){
   document.getElementById("meanTa").style.display = l==="Tamil"?"":"none";
   q.placeholder = l==="Tamil"?"குர்ஆன் பற்றி கேளுங்கள்…":"Ask anything about the Quran…";
   if(typeof syncSidebarLang==="function") syncSidebarLang();
+  if(typeof syncReaderLang==="function") syncReaderLang();
   renderWelcomeIfEmpty();
 }
 
@@ -861,6 +936,69 @@ q.addEventListener("input",()=>{q.style.height="auto";q.style.height=Math.min(q.
 q.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();ask();}});
 renderWelcomeIfEmpty();
 
+/* ---------- Quran Reader (Read mode) — reads the embedded English text; no API ---------- */
+const READER_KEY="bayyinah.reader.sura";
+let rdCur=0, rdBuilt=false;
+function setMode(mode){
+  const read = mode==="read";
+  document.body.classList.toggle("reading", read);
+  const a=document.getElementById("tabAsk"), r=document.getElementById("tabRead");
+  if(a){ a.classList.toggle("on",!read); a.setAttribute("aria-selected", read?"false":"true"); }
+  if(r){ r.classList.toggle("on",read); r.setAttribute("aria-selected", read?"true":"false"); }
+  const rd=document.getElementById("reader"); if(rd) rd.setAttribute("aria-hidden", read?"false":"true");
+  if(read){
+    if(!rdBuilt) buildReader();
+    if(!rdCur){ let s=1; try{ s=parseInt(localStorage.getItem(READER_KEY))||1; }catch(e){} renderSura(s); }
+  }
+}
+function enterAskMode(){ setMode("ask"); }
+function buildReader(){
+  const sel=document.getElementById("rdSura"); if(!sel) return;
+  sel.innerHTML = SURA_NAMES.map((nm,i)=>`<option value="${i+1}">${i+1}. ${esc(nm)}</option>`).join("");
+  sel.addEventListener("change",()=>renderSura(parseInt(sel.value)));
+  document.getElementById("rdPrev").addEventListener("click",()=>renderSura(rdCur-1));
+  document.getElementById("rdNext").addEventListener("click",()=>renderSura(rdCur+1));
+  document.getElementById("rdVerses").addEventListener("click",(e)=>{
+    const b=e.target.closest(".rd-foot-btn"); if(b){ b.parentNode.classList.toggle("open"); }
+  });
+  rdBuilt=true;
+}
+function footLabel(){ return LANG==="Tamil"?"அடிக்குறிப்பு":"Footnote"; }
+function renderSura(n){
+  n=Math.min(114,Math.max(1,n|0)); rdCur=n;
+  const sel=document.getElementById("rdSura"); if(sel) sel.value=String(n);
+  try{ localStorage.setItem(READER_KEY,String(n)); }catch(e){}
+  const rows=V.filter(x=>x.s===n);
+  const nm=SURA_NAMES[n-1]||("Sura "+n);
+  const bas = rows.find(x=>x.v===0);
+  const isNoBas = bas && /no\s*basmalah/i.test(bas.text||"");
+  let html=`<div class="rd-suratitle"><div class="en">Sura ${n} · ${esc(nm)}</div></div>`;
+  if(n!==1){
+    if(isNoBas){
+      html+=`<div class="rd-nobasmala">${esc((bas.text||"No Basmalah").replace(/\*/g,""))}</div>`;
+      if(bas.foot) html+=`<div class="rd-foot" style="text-align:center;margin:-6px 0 16px"><button class="rd-foot-btn" type="button"><span class="cv">▸</span> ${footLabel()}</button><div class="rd-foot-text" style="text-align:left">${esc(bas.foot)}</div></div>`;
+    } else if(bas){
+      html+=`<div class="rd-basmala">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div><div class="rd-basmala-en">${esc(bas.text)}</div>`;
+    }
+  }
+  for(const x of rows){
+    if(x.v===0) continue;
+    if(x.title) html+=`<div class="rd-section">${esc(x.title)}</div>`;
+    html+=`<div class="rd-verse"><span class="rd-vnum">${x.s}:${x.v}</span><div class="rd-vbody"><div class="rd-vtext">${esc(x.text)}</div>`;
+    if(x.foot) html+=`<div class="rd-foot"><button class="rd-foot-btn" type="button"><span class="cv">▸</span> ${footLabel()}</button><div class="rd-foot-text">${esc(x.foot)}</div></div>`;
+    html+=`</div></div>`;
+  }
+  const c=document.getElementById("rdVerses"); c.innerHTML=html;
+  const rd=document.getElementById("reader"); if(rd) rd.scrollTop=0;
+  try{ window.scrollTo(0,0); }catch(e){}
+}
+function syncReaderLang(){
+  const a=document.querySelector("#tabAsk .lbl"), r=document.querySelector("#tabRead .lbl");
+  if(a) a.textContent = LANG==="Tamil"?"கேள்":"Ask";
+  if(r) r.textContent = LANG==="Tamil"?"படி":"Read";
+  document.querySelectorAll(".rd-foot-btn").forEach(b=>b.innerHTML=`<span class="cv">▸</span> ${footLabel()}`);
+}
+
 /* ===================================================================
    Conversation history — client-side only (localStorage).
    Re-uses the existing addUser / addAnswer / clearWelcome /
@@ -953,6 +1091,7 @@ renderWelcomeIfEmpty();
   /* ---- actions ---- */
   function loadConv(id){
     const conv=CONVS.find(c=>c.id===id); if(!conv) return;
+    if(typeof enterAskMode==="function") enterAskMode();   // reading → chat
     currentConvId=id;
     if(conv.lang && conv.lang!==LANG) setLang(conv.lang);   // restore the chat's language
     chat.innerHTML="";
@@ -969,6 +1108,7 @@ renderWelcomeIfEmpty();
     scroll();
   }
   function newChat(){
+    if(typeof enterAskMode==="function") enterAskMode();   // reading → chat
     currentConvId=null;
     chat.innerHTML="";
     renderWelcomeIfEmpty();
