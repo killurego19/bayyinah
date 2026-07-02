@@ -382,6 +382,15 @@ header{
   font-family:"Cormorant Garamond",serif;font-size:15px;padding:9px 12px;border-radius:12px;cursor:pointer;text-align:center;text-align-last:center}
 #rdSura:focus{outline:0;border-color:var(--gold)}
 
+.rd-opts{max-width:760px;width:100%;margin:2px auto 0;padding:0 16px;display:flex;justify-content:flex-end}
+.rd-arbtn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:transparent;
+  color:var(--muted);cursor:pointer;font-family:"Cormorant Garamond",serif;font-size:13px;padding:5px 13px;border-radius:999px;transition:.18s}
+.rd-arbtn .ae{font-family:"Amiri",serif;font-size:15px;line-height:1}
+.rd-arbtn:hover{border-color:var(--gold);color:var(--parch-dim)}
+.rd-arbtn.on{border-color:var(--gold);color:var(--gold-soft);background:rgba(201,162,75,.1)}
+.rd-arbtn.loading{opacity:.55;pointer-events:none}
+.rd-ar{font-family:"Amiri",serif;font-size:22px;line-height:1.95;color:var(--gold-soft);direction:rtl;text-align:right;margin:0 0 8px}
+
 .rd-verses{max-width:760px;width:100%;margin:0 auto;padding:10px 16px 40px}
 .rd-suratitle{text-align:center;margin:4px 0 14px}
 .rd-suratitle .en{font-family:"Cormorant Garamond",serif;font-size:16px;color:var(--muted);letter-spacing:.02em}
@@ -542,6 +551,11 @@ header{
       <button class="rd-nav" id="rdPrev" aria-label="Previous sura"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       <div class="rd-pick"><select id="rdSura" aria-label="Select sura"></select></div>
       <button class="rd-nav" id="rdNext" aria-label="Next sura"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+    <div class="rd-opts">
+      <button id="rdArabic" class="rd-arbtn" type="button" onclick="toggleArabic()" aria-label="Toggle Arabic text">
+        <span class="ae" aria-hidden="true">ع</span> <span class="albl">Arabic</span>
+      </button>
     </div>
     <div class="rd-verses" id="rdVerses"></div>
   </div>
@@ -949,8 +963,8 @@ q.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefau
 renderWelcomeIfEmpty();
 
 /* ---------- Quran Reader (Read mode) — reads the embedded English text; no API ---------- */
-const READER_KEY="bayyinah.reader.sura";
-let rdCur=0, rdBuilt=false;
+const READER_KEY="bayyinah.reader.sura", AR_KEY="bayyinah.reader.arabic";
+let rdCur=0, rdBuilt=false, AR=null, arOn=false;
 function setMode(mode){
   const read = mode==="read";
   document.body.classList.toggle("reading", read);
@@ -961,6 +975,7 @@ function setMode(mode){
   if(read){
     if(!rdBuilt) buildReader();
     if(!rdCur){ let s=1; try{ s=parseInt(localStorage.getItem(READER_KEY))||1; }catch(e){} renderSura(s); }
+    if(arOn && !AR) loadArabic().then(()=>{ if(rdCur) renderSura(rdCur); });
   }
 }
 function enterAskMode(){ setMode("ask"); }
@@ -970,6 +985,8 @@ function buildReader(){
   sel.addEventListener("change",()=>renderSura(parseInt(sel.value)));
   document.getElementById("rdPrev").addEventListener("click",()=>renderSura(rdCur-1));
   document.getElementById("rdNext").addEventListener("click",()=>renderSura(rdCur+1));
+  try{ arOn = localStorage.getItem(AR_KEY)==="1"; }catch(e){}
+  updateArabicBtn();
   document.getElementById("rdVerses").addEventListener("click",(e)=>{
     const fb=e.target.closest(".rd-foot-btn"); if(fb){ fb.closest(".rd-foot").classList.toggle("open"); return; }
     const ex=e.target.closest(".rd-explain"); if(ex){ const r=ex.closest(".rd-verse").querySelector(".rd-vnum").textContent.split(":"); explainVerse(+r[0],+r[1]); return; }
@@ -1016,6 +1033,25 @@ function discussVerse(s,v){
   const starter = LANG==="Tamil" ? `${s}:${v} பற்றி: ` : `About ${s}:${v}: `;
   try{ q.value=starter; q.focus(); q.dispatchEvent(new Event("input")); }catch(e){}
 }
+/* Optional Arabic — loaded on demand (quran-ar.json ~1.3MB); never required for reading */
+async function loadArabic(){
+  if(AR) return AR;
+  try{ const r=await fetch("quran-ar.json",{cache:"force-cache"}); if(r.ok) AR=await r.json(); }catch(e){}
+  return AR;
+}
+function updateArabicBtn(){
+  const b=document.getElementById("rdArabic"); if(!b) return;
+  b.classList.toggle("on",arOn);
+  const lbl=b.querySelector(".albl"); if(lbl) lbl.textContent = LANG==="Tamil"?"அரபு":"Arabic";
+}
+async function toggleArabic(){
+  arOn=!arOn;
+  try{ localStorage.setItem(AR_KEY, arOn?"1":"0"); }catch(e){}
+  updateArabicBtn();
+  const b=document.getElementById("rdArabic");
+  if(arOn && !AR){ if(b) b.classList.add("loading"); await loadArabic(); if(b) b.classList.remove("loading"); }
+  if(rdCur) renderSura(rdCur);
+}
 function renderSura(n){
   n=Math.min(114,Math.max(1,n|0)); rdCur=n;
   const sel=document.getElementById("rdSura"); if(sel) sel.value=String(n);
@@ -1036,7 +1072,8 @@ function renderSura(n){
   for(const x of rows){
     if(x.v===0) continue;
     if(x.title) html+=`<div class="rd-section">${esc(x.title)}</div>`;
-    html+=`<div class="rd-verse"><span class="rd-vnum">${x.s}:${x.v}</span><div class="rd-vbody"><div class="rd-vtext">${esc(x.text)}</div>`;
+    const arT = (arOn && AR) ? AR[x.s+":"+x.v] : null;
+    html+=`<div class="rd-verse"><span class="rd-vnum">${x.s}:${x.v}</span><div class="rd-vbody">${arT?`<div class="rd-ar" dir="rtl">${esc(arT)}</div>`:""}<div class="rd-vtext">${esc(x.text)}</div>`;
     if(x.foot) html+=`<div class="rd-foot"><button class="rd-foot-btn" type="button"><span class="cv">▸</span> ${footLabel()}</button><div class="rd-foot-text">${esc(x.foot)}</div></div>`;
     html+=`<div class="rd-actions"><button class="rd-act rd-explain" type="button"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>${explainLabel()}</button><button class="rd-act rd-discuss" type="button"><svg viewBox="0 0 24 24" fill="none"><path d="M4 5h16v11H8l-4 4V5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>${discussLabel()}</button></div>`;
     html+=`</div></div>`;
@@ -1049,6 +1086,7 @@ function syncReaderLang(){
   const a=document.querySelector("#tabAsk .lbl"), r=document.querySelector("#tabRead .lbl");
   if(a) a.textContent = LANG==="Tamil"?"கேள்":"Ask";
   if(r) r.textContent = LANG==="Tamil"?"படி":"Read";
+  updateArabicBtn();
   if(rdBuilt && rdCur) renderSura(rdCur);   // re-render so verse labels (footnote/explain/discuss) localise
 }
 
