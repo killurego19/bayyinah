@@ -1038,12 +1038,12 @@ function discussVerse(s,v){
 /* Optional Arabic — loaded on demand (quran-ar.json ~1.3MB); never required for reading */
 async function loadArabic(){
   if(AR) return AR;
-  try{ const r=await fetch("quran-ar.json",{cache:"force-cache"}); if(r.ok) AR=await r.json(); }catch(e){}
+  try{ const r=await fetch("quran-ar.json"); if(r.ok) AR=await r.json(); }catch(e){}
   return AR;
 }
 async function loadTamil(){
   if(TAM) return TAM;
-  try{ const r=await fetch("quran-ta.json",{cache:"force-cache"}); if(r.ok) TAM=await r.json(); }catch(e){}
+  try{ const r=await fetch("quran-ta.json"); if(r.ok) TAM=await r.json(); }catch(e){}
   return TAM;
 }
 function updateArabicBtn(){
@@ -1073,7 +1073,8 @@ function renderSura(n){
       html+=`<div class="rd-nobasmala">${esc((bas.text||"No Basmalah").replace(/\*/g,""))}</div>`;
       if(bas.foot) html+=`<div class="rd-foot" style="text-align:center;margin:-6px 0 16px"><button class="rd-foot-btn" type="button"><span class="cv">▸</span> ${footLabel()}</button><div class="rd-foot-text" style="text-align:left">${esc(bas.foot)}</div></div>`;
     } else if(bas){
-      const bt = (LANG==="Tamil" && TAM && TAM[n+":0"]) ? TAM[n+":0"] : bas.text;
+      const btEntry = (LANG==="Tamil" && TAM) ? TAM[n+":0"] : null;
+      const bt = (btEntry && btEntry.t) ? btEntry.t : bas.text;
       html+=`<div class="rd-basmala">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div><div class="rd-basmala-en${LANG==="Tamil"?" tamil":""}">${esc(bt)}</div>`;
     }
   }
@@ -1082,9 +1083,12 @@ function renderSura(n){
     if(x.title) html+=`<div class="rd-section">${esc(x.title)}</div>`;
     const key=x.s+":"+x.v;
     const arT = (arOn && AR) ? AR[key] : null;
-    const useTa = (LANG==="Tamil" && TAM && TAM[key]);
-    html+=`<div class="rd-verse"><span class="rd-vnum">${x.s}:${x.v}</span><div class="rd-vbody">${arT?`<div class="rd-ar" dir="rtl">${esc(arT)}</div>`:""}<div class="rd-vtext${useTa?' tamil':''}">${esc(useTa?TAM[key]:x.text)}</div>`;
-    if(x.foot) html+=`<div class="rd-foot"><button class="rd-foot-btn" type="button"><span class="cv">▸</span> ${footLabel()}</button><div class="rd-foot-text">${esc(x.foot)}</div></div>`;
+    const tam = (LANG==="Tamil" && TAM) ? TAM[key] : null;
+    const useTa = tam && tam.t;
+    html+=`<div class="rd-verse"><span class="rd-vnum">${x.s}:${x.v}</span><div class="rd-vbody">${arT?`<div class="rd-ar" dir="rtl">${esc(arT)}</div>`:""}<div class="rd-vtext${useTa?' tamil':''}">${esc(useTa?tam.t:x.text)}</div>`;
+    const taF = (tam && tam.f) ? tam.f : null;
+    const footTxt = taF || x.foot;
+    if(footTxt) html+=`<div class="rd-foot"><button class="rd-foot-btn" type="button"><span class="cv">▸</span> ${footLabel()}</button><div class="rd-foot-text${taF?' tamil':''}">${esc(footTxt)}</div></div>`;
     html+=`<div class="rd-actions"><button class="rd-act rd-explain" type="button"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>${explainLabel()}</button><button class="rd-act rd-discuss" type="button"><svg viewBox="0 0 24 24" fill="none"><path d="M4 5h16v11H8l-4 4V5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>${discussLabel()}</button></div>`;
     html+=`</div></div>`;
   }
