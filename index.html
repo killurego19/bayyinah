@@ -810,6 +810,7 @@ The user may write in Tamil; you MUST still output English search terms (transla
   Example: "I feel hopeless / depressed" -> despair, hope, mercy, relief, patience, grief, comfort, ease.
   Example: "how to treat my parents" -> parents, kindness, honor, gratitude, mother, father, respect.
 - Also draw distinctive footnote phrasing where relevant (e.g. false-verses question -> false, fabricated, added, idol, worshipers, tampering, 128, 129, nineteen, code).
+- CRITICAL for LIST / "top N" / broad questions (e.g. "top 10 advice God gives", "main commandments", "general guidance", "what does the Quran teach"): return a WIDE, DIVERSE set of 10-12 terms spanning MANY DISTINCT topics — e.g. parents, charity, prayer, honesty, kindness, patience, forgiveness, humility, justice, gratitude, truthfulness, moderation, orphans, neighbors — NOT several near-synonyms of one concept (do NOT return worship/god/alone/one/only together). Diversity is essential so a VARIETY of verses is retrieved, not repeats of one theme.
 - If specific verses are implied, put them in "refs" as "sura:verse" (e.g. the disputed verses are "9:128","9:129", with anchors "9:1","9:127"). Otherwise refs=[].`,
       400);
     let p; try{p=parseJSON(plan);}catch{ p={type:"topic",terms:text.split(/\s+/)}; }
@@ -873,6 +874,7 @@ RULES:
 - Be clear, warm, and concise. Explain reasoning briefly.
 - Write ALL numbers as digits (e.g. 19, 6346, 1:1). NEVER spell numbers out as words in any language.
 - Do NOT repeat the same sentence, phrase, or point. No filler or padding. If the provided material does not actually answer the question, say so in ONE short sentence instead of repeating yourself.
+- For "top N" or list requests: give only as many DISTINCT points as the provided verses genuinely support, each a different lesson — never repeat a point or pad to reach the requested number.
 - Respond ENTIRELY in ${LANG==="Tamil"?"Tamil (தமிழ்)":"English"}.
 ${countBlock?(countBlock.documented
   ? `\nThis is a documented count from Dr. Rashad Khalifa's published research: the word "${countBlock.word}" occurs ${countBlock.n} times in the Quran${countBlock.claim&&countBlock.claim!=="—"?` (${countBlock.claim})`:""}. State this number as Dr. Khalifa's documented figure. Briefly note its place in the 19-based mathematical code. Do NOT recount or contradict it.`
