@@ -449,6 +449,39 @@ header{
   .rd-verses{padding:8px 14px 40px}
   .rd-vtext{font-size:16px}
 }
+
+/* ===== word-by-word + root concordance ===== */
+.rd-act.rd-words-btn{color:var(--parch-dim)}
+.rd-act.rd-words-btn:hover{border-color:var(--gold);color:var(--gold-soft)}
+.rd-act.loading{opacity:.55;pointer-events:none}
+.rd-words{display:flex;flex-wrap:wrap;gap:8px;direction:rtl;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
+.rd-word{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:64px;max-width:160px;
+  padding:8px 10px;border:1px solid var(--line);border-radius:12px;background:rgba(19,33,27,.5)}
+.w-ar{font-family:"Amiri",serif;font-size:22px;color:var(--gold-soft);line-height:1.5;direction:rtl}
+.w-tr{font-family:"Spectral",serif;font-size:11.5px;font-style:italic;color:var(--muted);direction:ltr}
+.w-en{font-family:"Spectral",serif;font-size:12.5px;color:var(--parch-dim);direction:ltr;text-align:center;line-height:1.35}
+.w-root{margin-top:3px;border:1px solid rgba(201,162,75,.35);background:rgba(201,162,75,.1);color:var(--gold-soft);
+  font-family:"Amiri",serif;font-size:14px;padding:1px 9px;border-radius:999px;cursor:pointer;direction:rtl;transition:.15s}
+.w-root:hover{border-color:var(--gold);background:rgba(201,162,75,.2)}
+.rd-verse.rd-flash{background:rgba(201,162,75,.16);transition:background .3s}
+.rd-credit{max-width:760px;margin:26px auto 0;padding:0 16px;font-size:11px;color:var(--muted);opacity:.7;text-align:center}
+.rd-credit a{color:var(--muted)}
+
+/* concordance sheet */
+body.cc-open{overflow:hidden}
+.cc{position:fixed;inset:0;z-index:70;background:rgba(6,11,9,.66);display:flex;align-items:flex-end;justify-content:center}
+.cc-panel{width:100%;max-width:620px;max-height:82vh;display:flex;flex-direction:column;
+  background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--gold);border-bottom:0;
+  border-top-left-radius:18px;border-top-right-radius:18px;box-shadow:0 -20px 50px -20px rgba(0,0,0,.85);animation:ibUp .28s ease both}
+.cc-head{display:flex;align-items:center;gap:10px;padding:14px 16px 10px;border-bottom:1px solid var(--line)}
+.cc-title{flex:1;font-family:"Cormorant Garamond",serif;font-size:17px;color:var(--gold-soft)}
+.cc-close{background:none;border:0;color:var(--muted);font-size:24px;line-height:1;cursor:pointer;padding:0 6px}
+.cc-close:hover{color:var(--parch)}
+.cc-list{overflow-y:auto;padding:8px 10px calc(14px + env(safe-area-inset-bottom))}
+.cc-item{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid rgba(36,66,56,.4);background:none;cursor:pointer;
+  font-family:"Spectral",serif;font-size:14.5px;color:var(--parch-dim);padding:11px 8px;line-height:1.45}
+.cc-item:hover{color:var(--parch);background:rgba(24,43,35,.5)}
+.cc-ref{font-family:"Cormorant Garamond",serif;font-weight:600;color:var(--gold-soft);margin-right:8px}
 </style>
 
 <div id="shell">
@@ -587,6 +620,13 @@ header{
     </div>
   </div>
 </div>
+</div>
+
+<div id="concord" class="cc" hidden role="dialog" aria-label="Root concordance">
+  <div class="cc-panel">
+    <div class="cc-head"><div class="cc-title" id="ccTitle"></div><button class="cc-close" id="ccClose" aria-label="Close">&times;</button></div>
+    <div class="cc-list" id="ccList"></div>
+  </div>
 </div>
 
 <div id="installBanner" class="ib" hidden role="dialog" aria-label="Install Bayyinah">
@@ -1028,15 +1068,69 @@ function buildReader(){
   updateArabicBtn();
   document.getElementById("rdVerses").addEventListener("click",(e)=>{
     const fb=e.target.closest(".rd-foot-btn"); if(fb){ fb.closest(".rd-foot").classList.toggle("open"); return; }
+    const rt=e.target.closest(".w-root"); if(rt){ openConcordance(rt.getAttribute("data-root")); return; }
+    const wb=e.target.closest(".rd-words-btn"); if(wb){ const r=wb.closest(".rd-verse").querySelector(".rd-vnum").textContent.split(":"); showWords(wb.closest(".rd-verse"), +r[0], +r[1]); return; }
     const ex=e.target.closest(".rd-explain"); if(ex){ const r=ex.closest(".rd-verse").querySelector(".rd-vnum").textContent.split(":"); explainVerse(+r[0],+r[1]); return; }
     const di=e.target.closest(".rd-discuss"); if(di){ const r=di.closest(".rd-verse").querySelector(".rd-vnum").textContent.split(":"); discussVerse(+r[0],+r[1]); return; }
     const vs=e.target.closest(".rd-verse"); if(vs) vs.classList.toggle("active");
   });
+  const cc=document.getElementById("concord");
+  if(cc){
+    const cl=document.getElementById("ccClose"); if(cl) cl.addEventListener("click", closeConcordance);
+    cc.addEventListener("click",(e)=>{ if(e.target===cc) closeConcordance(); });
+    document.getElementById("ccList").addEventListener("click",(e)=>{ const it=e.target.closest(".cc-item"); if(it){ const r=it.getAttribute("data-ref").split(":"); navToVerse(+r[0],+r[1]); } });
+  }
   rdBuilt=true;
 }
 function footLabel(){ return LANG==="Tamil"?"அடிக்குறிப்பு":"Footnote"; }
 function explainLabel(){ return LANG==="Tamil"?"விளக்கம்":"Explain"; }
 function discussLabel(){ return LANG==="Tamil"?"கலந்துரையாடு":"Discuss"; }
+function wordsLabel(){ return LANG==="Tamil"?"வார்த்தைகள்":"Words"; }
+
+/* ---------- Word-by-word + root concordance (data from WikiSubmission, MIT) ---------- */
+let WBW={}, ROOTS=null;
+async function loadWbw(s){ if(WBW[s]) return WBW[s]; try{ const r=await fetch("wbw/"+s+".json"); if(r.ok) WBW[s]=await r.json(); }catch(e){} return WBW[s]; }
+async function loadRoots(){ if(ROOTS) return ROOTS; try{ const r=await fetch("roots.json"); if(r.ok) ROOTS=await r.json(); }catch(e){} return ROOTS; }
+async function showWords(verseEl,s,v){
+  if(!verseEl) return;
+  const existing=verseEl.querySelector(".rd-words");
+  if(existing){ existing.remove(); return; }                 // toggle off
+  const btn=verseEl.querySelector(".rd-words-btn"); if(btn) btn.classList.add("loading");
+  const data=await loadWbw(s);
+  if(btn) btn.classList.remove("loading");
+  const words=data && data[String(v)];
+  if(!words){ return; }
+  let html='<div class="rd-words">';
+  for(const w of words){
+    const ar=w[0]||"", tr=w[1]||"", en=w[2]||"", root=w[3]||"";
+    html+=`<div class="rd-word"><div class="w-ar">${esc(ar)}</div><div class="w-tr">${esc(tr)}</div><div class="w-en">${esc(en)}</div>${root?`<button class="w-root" type="button" data-root="${esc(root)}">${esc(root)}</button>`:""}</div>`;
+  }
+  html+='</div>';
+  verseEl.querySelector(".rd-vbody").insertAdjacentHTML("beforeend", html);
+}
+async function openConcordance(root){
+  const cc=document.getElementById("concord"); if(!cc) return;
+  document.getElementById("ccTitle").textContent = (LANG==="Tamil"?"மூலம்":"Root")+" "+root+" …";
+  document.getElementById("ccList").innerHTML="";
+  cc.hidden=false; document.body.classList.add("cc-open");
+  const R=await loadRoots(); const entry=R && R[root];
+  if(!entry){ document.getElementById("ccTitle").textContent = root; return; }
+  const refs=entry.r||[]; const cnt=entry.c||refs.length;
+  document.getElementById("ccTitle").textContent = `${LANG==="Tamil"?"மூலம்":"Root"} ${root} · ${LANG==="Tamil"?`${refs.length} வசனங்கள்`:`${refs.length} verses`} (${cnt}×)`;
+  let html="";
+  for(const ref of refs){ const x=byKey[ref]; const txt=x?esc(x.text).slice(0,90):""; html+=`<button class="cc-item" type="button" data-ref="${ref}"><span class="cc-ref">${ref}</span> ${txt}</button>`; }
+  document.getElementById("ccList").innerHTML=html;
+}
+function closeConcordance(){ const cc=document.getElementById("concord"); if(cc) cc.hidden=true; document.body.classList.remove("cc-open"); }
+function navToVerse(s,v){
+  closeConcordance();
+  setMode("read");
+  if(s!==rdCur) renderSura(s);
+  setTimeout(function(){
+    const el=[...document.querySelectorAll("#rdVerses .rd-verse")].find(x=>x.querySelector(".rd-vnum").textContent===s+":"+v);
+    if(el){ el.scrollIntoView({block:"center"}); el.classList.add("rd-flash"); setTimeout(()=>el.classList.remove("rd-flash"),1300); }
+  }, s!==rdCur?60:0);
+}
 
 /* Explain a specific verse — grounds on that verse + neighbours + footnote + appendices, answers via the existing chat */
 async function explainVerse(s,v){
@@ -1134,9 +1228,10 @@ function renderSura(n){
     const taF = (tam && tam.f) ? tam.f : null;
     const footTxt = taF || x.foot;
     if(footTxt) html+=`<div class="rd-foot"><button class="rd-foot-btn" type="button"><span class="cv">▸</span> ${footLabel()}</button><div class="rd-foot-text${taF?' tamil':''}">${esc(footTxt)}</div></div>`;
-    html+=`<div class="rd-actions"><button class="rd-act rd-explain" type="button"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>${explainLabel()}</button><button class="rd-act rd-discuss" type="button"><svg viewBox="0 0 24 24" fill="none"><path d="M4 5h16v11H8l-4 4V5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>${discussLabel()}</button></div>`;
+    html+=`<div class="rd-actions"><button class="rd-act rd-words-btn" type="button"><svg viewBox="0 0 24 24" fill="none"><path d="M4 5h7M7 4v1.6M9.5 5c0 3.6-2.3 6.6-5 8M5.5 8.5c0 2 1.9 3.9 4.5 4.9M13 20l4-9 4 9M14.6 16.5h4.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>${wordsLabel()}</button><button class="rd-act rd-explain" type="button"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>${explainLabel()}</button><button class="rd-act rd-discuss" type="button"><svg viewBox="0 0 24 24" fill="none"><path d="M4 5h16v11H8l-4 4V5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>${discussLabel()}</button></div>`;
     html+=`</div></div>`;
   }
+  html+=`<div class="rd-credit">${LANG==="Tamil"?"வார்த்தை வாரியான & மூல தரவு":"Word-by-word & root data"}: <a href="https://github.com/WikiSubmission/wikisubmission-api-quran" target="_blank" rel="noopener">WikiSubmission</a> (MIT)</div>`;
   const c=document.getElementById("rdVerses"); c.innerHTML=html;
   const rd=document.getElementById("reader"); if(rd) rd.scrollTop=0;
   try{ window.scrollTo(0,0); }catch(e){}
