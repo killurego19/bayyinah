@@ -361,8 +361,10 @@ header{
 .ib{position:fixed;left:0;right:0;bottom:0;z-index:60;max-width:560px;margin:0 auto;
   background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--gold);border-bottom:0;
   border-top-left-radius:16px;border-top-right-radius:16px;padding:15px 16px calc(15px + env(safe-area-inset-bottom));
-  box-shadow:0 -16px 44px -20px rgba(0,0,0,.85);animation:ibUp .3s ease both}
-@keyframes ibUp{from{transform:translateY(100%)}to{transform:none}}
+  box-shadow:0 -16px 44px -20px rgba(0,0,0,.85);animation:ibUp .3s ease}
+/* NB: no "both" fill-mode + a small 16px rise (not 100%) — so the sheet can never
+   get parked off-screen if the entry animation fails to run/complete. Resting = visible. */
+@keyframes ibUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
 .ib-row{display:flex;align-items:center;gap:13px}
 .ib-icon{width:44px;height:44px;border-radius:12px;flex:0 0 44px;border:1px solid var(--line)}
 .ib-title{font-family:"Cormorant Garamond",serif;font-size:18px;color:var(--gold-soft);line-height:1.1}
@@ -470,9 +472,12 @@ header{
 /* concordance sheet */
 body.cc-open{overflow:hidden}
 .cc{position:fixed;inset:0;z-index:70;background:rgba(6,11,9,.66);display:flex;align-items:flex-end;justify-content:center}
+/* An author `display` rule beats the UA `[hidden]{display:none}`, so the `hidden`
+   attribute alone would NOT hide these — re-assert it with higher specificity. */
+.cc[hidden],.sb-install[hidden],.rd-np[hidden]{display:none}
 .cc-panel{width:100%;max-width:620px;max-height:82vh;display:flex;flex-direction:column;
   background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--gold);border-bottom:0;
-  border-top-left-radius:18px;border-top-right-radius:18px;box-shadow:0 -20px 50px -20px rgba(0,0,0,.85);animation:ibUp .28s ease both}
+  border-top-left-radius:18px;border-top-right-radius:18px;box-shadow:0 -20px 50px -20px rgba(0,0,0,.85);animation:ibUp .28s ease}
 .cc-head{display:flex;align-items:center;gap:10px;padding:14px 16px 10px;border-bottom:1px solid var(--line)}
 .cc-title{flex:1;font-family:"Cormorant Garamond",serif;font-size:17px;color:var(--gold-soft)}
 .cc-close{background:none;border:0;color:var(--muted);font-size:24px;line-height:1;cursor:pointer;padding:0 6px}
