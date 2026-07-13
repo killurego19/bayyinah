@@ -32,3 +32,9 @@ HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
 WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.```
+
+## Audio recitation
+
+Arabic verse audio is streamed on demand from **everyayah.com** (a free public
+Quran audio host), keyed by sura:ayah. Reciters: Mishary Alafasy, Abdul Basit,
+Al-Husary, Al-Minshawi, Al-Sudais. Audio is not bundled or redistributed.

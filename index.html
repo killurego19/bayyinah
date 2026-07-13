@@ -400,7 +400,7 @@ header{
   font-family:"Cormorant Garamond",serif;font-size:15px;padding:9px 12px;border-radius:12px;cursor:pointer;text-align:center;text-align-last:center}
 #rdSura:focus{outline:0;border-color:var(--gold)}
 
-.rd-opts{max-width:760px;width:100%;margin:2px auto 0;padding:0 16px;display:flex;justify-content:flex-end}
+.rd-opts{max-width:760px;width:100%;margin:2px auto 0;padding:0 16px;display:flex;justify-content:space-between;align-items:center;gap:8px}
 .rd-arbtn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:transparent;
   color:var(--muted);cursor:pointer;font-family:"Cormorant Garamond",serif;font-size:13px;padding:5px 13px;border-radius:999px;transition:.18s}
 .rd-arbtn .ae{font-family:"Amiri",serif;font-size:15px;line-height:1}
@@ -482,6 +482,23 @@ body.cc-open{overflow:hidden}
   font-family:"Spectral",serif;font-size:14.5px;color:var(--parch-dim);padding:11px 8px;line-height:1.45}
 .cc-item:hover{color:var(--parch);background:rgba(24,43,35,.5)}
 .cc-ref{font-family:"Cormorant Garamond",serif;font-weight:600;color:var(--gold-soft);margin-right:8px}
+
+/* ===== audio recitation ===== */
+.rd-recsel{background:var(--panel);border:1px solid var(--line);color:var(--parch-dim);font-family:"Cormorant Garamond",serif;
+  font-size:13px;padding:5px 10px;border-radius:999px;cursor:pointer;max-width:52%}
+.rd-recsel:focus{outline:0;border-color:var(--gold)}
+.rd-act.rd-play{color:var(--parch-dim)}
+.rd-act.rd-play:hover{border-color:var(--emerald);color:var(--parch)}
+.rd-act.rd-play svg{width:13px;height:13px}
+.rd-verse.playing{background:rgba(79,174,135,.12)}
+.rd-verse.playing .rd-vnum{background:var(--emerald);color:#08130e;animation:npPulse 1.4s ease-in-out infinite}
+@keyframes npPulse{0%,100%{box-shadow:0 0 0 0 rgba(79,174,135,.5)}50%{box-shadow:0 0 0 5px rgba(79,174,135,0)}}
+.rd-np{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:55;
+  display:inline-flex;align-items:center;gap:9px;border:1px solid var(--emerald);border-radius:999px;cursor:pointer;
+  background:linear-gradient(160deg,var(--panel2),var(--panel));color:var(--parch);font-family:"Cormorant Garamond",serif;
+  font-size:15px;padding:9px 18px;box-shadow:0 10px 30px -10px rgba(0,0,0,.8)}
+.rd-np svg{width:13px;height:13px;color:var(--emerald)}
+.rd-np:hover{border-color:var(--gold)}
 </style>
 
 <div id="shell">
@@ -604,12 +621,18 @@ body.cc-open{overflow:hidden}
       <button class="rd-nav" id="rdNext" aria-label="Next sura"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     </div>
     <div class="rd-opts">
+      <select id="rdReciter" class="rd-recsel" aria-label="Reciter"></select>
       <button id="rdArabic" class="rd-arbtn" type="button" onclick="toggleArabic()" aria-label="Toggle Arabic text">
         <span class="ae" aria-hidden="true">ع</span> <span class="albl">Arabic</span>
       </button>
     </div>
     <div class="rd-verses" id="rdVerses"></div>
   </div>
+  <audio id="rdAudio" preload="none"></audio>
+  <button id="rdNowPlaying" class="rd-np" type="button" hidden aria-label="Stop recitation">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>
+    <span id="rdNpText"></span>
+  </button>
 
   <div class="composer">
     <div class="cwrap">
@@ -1045,6 +1068,7 @@ const READER_KEY="bayyinah.reader.sura", AR_KEY="bayyinah.reader.arabic";
 let rdCur=0, rdBuilt=false, AR=null, arOn=false, TAM=null;
 function setMode(mode){
   const read = mode==="read";
+  if(!read && typeof stopAudio==="function") stopAudio();   // leaving Read stops recitation
   document.body.classList.toggle("reading", read);
   const a=document.getElementById("tabAsk"), r=document.getElementById("tabRead");
   if(a){ a.classList.toggle("on",!read); a.setAttribute("aria-selected", read?"false":"true"); }
@@ -1069,11 +1093,14 @@ function buildReader(){
   document.getElementById("rdVerses").addEventListener("click",(e)=>{
     const fb=e.target.closest(".rd-foot-btn"); if(fb){ fb.closest(".rd-foot").classList.toggle("open"); return; }
     const rt=e.target.closest(".w-root"); if(rt){ openConcordance(rt.getAttribute("data-root")); return; }
+    const pb=e.target.closest(".rd-play"); if(pb){ const r=pb.closest(".rd-verse").querySelector(".rd-vnum").textContent.split(":"); playVerse(+r[0],+r[1]); return; }
     const wb=e.target.closest(".rd-words-btn"); if(wb){ const r=wb.closest(".rd-verse").querySelector(".rd-vnum").textContent.split(":"); showWords(wb.closest(".rd-verse"), +r[0], +r[1]); return; }
     const ex=e.target.closest(".rd-explain"); if(ex){ const r=ex.closest(".rd-verse").querySelector(".rd-vnum").textContent.split(":"); explainVerse(+r[0],+r[1]); return; }
     const di=e.target.closest(".rd-discuss"); if(di){ const r=di.closest(".rd-verse").querySelector(".rd-vnum").textContent.split(":"); discussVerse(+r[0],+r[1]); return; }
     const vs=e.target.closest(".rd-verse"); if(vs) vs.classList.toggle("active");
   });
+  buildReciter();
+  const np=document.getElementById("rdNowPlaying"); if(np) np.addEventListener("click", stopAudio);
   const cc=document.getElementById("concord");
   if(cc){
     const cl=document.getElementById("ccClose"); if(cl) cl.addEventListener("click", closeConcordance);
@@ -1130,6 +1157,37 @@ function navToVerse(s,v){
     const el=[...document.querySelectorAll("#rdVerses .rd-verse")].find(x=>x.querySelector(".rd-vnum").textContent===s+":"+v);
     if(el){ el.scrollIntoView({block:"center"}); el.classList.add("rd-flash"); setTimeout(()=>el.classList.remove("rd-flash"),1300); }
   }, s!==rdCur?60:0);
+}
+
+/* ---------- Arabic audio recitation (everyayah.com, keyed by sura:ayah) ---------- */
+const RECITER_KEY="bayyinah.reader.reciter";
+const RECITERS=[["Alafasy_128kbps","Mishary Alafasy"],["Abdul_Basit_Murattal_192kbps","Abdul Basit"],["Husary_128kbps","Al-Husary"],["Minshawy_Murattal_128kbps","Al-Minshawi"],["Abdurrahmaan_As-Sudais_192kbps","Al-Sudais"]];
+let reciter="Alafasy_128kbps", playingRef=null;
+function playLabel(){ return LANG==="Tamil"?"ஒலி":"Play"; }
+function pad3(n){ n=String(n); return "000".slice(n.length)+n; }
+function audioUrl(s,v){ return "https://everyayah.com/data/"+reciter+"/"+pad3(s)+pad3(v)+".mp3"; }
+function verseElByRef(s,v){ return [...document.querySelectorAll("#rdVerses .rd-verse")].find(x=>x.querySelector(".rd-vnum").textContent===s+":"+v); }
+function setNowPlaying(s,v){
+  document.querySelectorAll("#rdVerses .rd-verse.playing").forEach(e=>e.classList.remove("playing"));
+  const np=document.getElementById("rdNowPlaying");
+  if(s){ const el=verseElByRef(s,v); if(el){ el.classList.add("playing"); el.scrollIntoView({block:"center"}); } const t=document.getElementById("rdNpText"); if(t) t.textContent=s+":"+v; if(np) np.hidden=false; }
+  else if(np) np.hidden=true;
+}
+function stopAudio(){ const A=document.getElementById("rdAudio"); if(A){ A.pause(); A.onended=null; } playingRef=null; setNowPlaying(null); }
+function playVerse(s,v){
+  const A=document.getElementById("rdAudio"); if(!A) return;
+  if(playingRef && playingRef[0]===s && playingRef[1]===v){ stopAudio(); return; }   // tap again = stop
+  A.src=audioUrl(s,v); A.play().catch(function(){});
+  playingRef=[s,v]; setNowPlaying(s,v);
+  A.onended=function(){ const next=byKey[s+":"+(v+1)]; if(next){ playVerse(s,v+1); } else { stopAudio(); } };
+  A.onerror=function(){ stopAudio(); };
+}
+function buildReciter(){
+  const sel=document.getElementById("rdReciter"); if(!sel) return;
+  sel.innerHTML=RECITERS.map(r=>`<option value="${r[0]}">${esc(r[1])}</option>`).join("");
+  try{ const saved=localStorage.getItem(RECITER_KEY); if(saved) reciter=saved; }catch(e){}
+  sel.value=reciter;
+  sel.addEventListener("change",function(){ reciter=sel.value; try{ localStorage.setItem(RECITER_KEY,reciter); }catch(e){} if(playingRef) playVerse(playingRef[0],playingRef[1]); });
 }
 
 /* Explain a specific verse — grounds on that verse + neighbours + footnote + appendices, answers via the existing chat */
@@ -1199,7 +1257,9 @@ async function toggleArabic(){
   if(rdCur) renderSura(rdCur);
 }
 function renderSura(n){
-  n=Math.min(114,Math.max(1,n|0)); rdCur=n;
+  n=Math.min(114,Math.max(1,n|0));
+  if(n!==rdCur && typeof stopAudio==="function") stopAudio();   // changing sura stops playback
+  rdCur=n;
   const sel=document.getElementById("rdSura"); if(sel) sel.value=String(n);
   try{ localStorage.setItem(READER_KEY,String(n)); }catch(e){}
   const rows=V.filter(x=>x.s===n);
@@ -1228,10 +1288,10 @@ function renderSura(n){
     const taF = (tam && tam.f) ? tam.f : null;
     const footTxt = taF || x.foot;
     if(footTxt) html+=`<div class="rd-foot"><button class="rd-foot-btn" type="button"><span class="cv">▸</span> ${footLabel()}</button><div class="rd-foot-text${taF?' tamil':''}">${esc(footTxt)}</div></div>`;
-    html+=`<div class="rd-actions"><button class="rd-act rd-words-btn" type="button"><svg viewBox="0 0 24 24" fill="none"><path d="M4 5h7M7 4v1.6M9.5 5c0 3.6-2.3 6.6-5 8M5.5 8.5c0 2 1.9 3.9 4.5 4.9M13 20l4-9 4 9M14.6 16.5h4.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>${wordsLabel()}</button><button class="rd-act rd-explain" type="button"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>${explainLabel()}</button><button class="rd-act rd-discuss" type="button"><svg viewBox="0 0 24 24" fill="none"><path d="M4 5h16v11H8l-4 4V5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>${discussLabel()}</button></div>`;
+    html+=`<div class="rd-actions"><button class="rd-act rd-play" type="button"><svg viewBox="0 0 24 24" fill="none"><path d="M7 5l12 7-12 7V5z" fill="currentColor"/></svg>${playLabel()}</button><button class="rd-act rd-words-btn" type="button"><svg viewBox="0 0 24 24" fill="none"><path d="M4 5h7M7 4v1.6M9.5 5c0 3.6-2.3 6.6-5 8M5.5 8.5c0 2 1.9 3.9 4.5 4.9M13 20l4-9 4 9M14.6 16.5h4.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>${wordsLabel()}</button><button class="rd-act rd-explain" type="button"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>${explainLabel()}</button><button class="rd-act rd-discuss" type="button"><svg viewBox="0 0 24 24" fill="none"><path d="M4 5h16v11H8l-4 4V5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>${discussLabel()}</button></div>`;
     html+=`</div></div>`;
   }
-  html+=`<div class="rd-credit">${LANG==="Tamil"?"வார்த்தை வாரியான & மூல தரவு":"Word-by-word & root data"}: <a href="https://github.com/WikiSubmission/wikisubmission-api-quran" target="_blank" rel="noopener">WikiSubmission</a> (MIT)</div>`;
+  html+=`<div class="rd-credit">${LANG==="Tamil"?"வார்த்தை வாரியான & மூல தரவு":"Word-by-word & root data"}: <a href="https://github.com/WikiSubmission/wikisubmission-api-quran" target="_blank" rel="noopener">WikiSubmission</a> (MIT) · ${LANG==="Tamil"?"ஒலி":"Audio"}: <a href="https://everyayah.com" target="_blank" rel="noopener">everyayah.com</a></div>`;
   const c=document.getElementById("rdVerses"); c.innerHTML=html;
   const rd=document.getElementById("reader"); if(rd) rd.scrollTop=0;
   try{ window.scrollTo(0,0); }catch(e){}
