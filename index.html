@@ -20,6 +20,15 @@
   --line:#244238; --gold:#c9a24b; --gold-soft:#e3c987; --emerald:#4fae87;
   --parch:#f4ecd8; --parch-dim:#cdc6b2; --text:#e9e4d4; --muted:#9fae9f;
   --user:#1d3a30; --shadow:0 18px 50px -20px rgba(0,0,0,.7);
+  /* Quranic Arabic: self-hosted Madinah Mushaf script (always loads, incl. offline PWA),
+     then real Arabic system fonts, and only serif as a last resort — never Times New Roman. */
+  --quran:"UthmanicHafs","Amiri","Traditional Arabic","Geeza Pro","Sakkal Majalla","Noto Naskh Arabic",serif;
+}
+/* KFGQPC Uthmanic Hafs (standard-Unicode) — renders our diacritized Uthmani text. */
+@font-face{
+  font-family:"UthmanicHafs";
+  src:url("fonts/uthmanic-hafs.woff2") format("woff2");
+  font-weight:400;font-style:normal;font-display:swap;
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
@@ -409,12 +418,12 @@ header{
 .rd-arbtn:hover{border-color:var(--gold);color:var(--parch-dim)}
 .rd-arbtn.on{border-color:var(--gold);color:var(--gold-soft);background:rgba(201,162,75,.1)}
 .rd-arbtn.loading{opacity:.55;pointer-events:none}
-.rd-ar{font-family:"Amiri",serif;font-size:22px;line-height:1.95;color:var(--gold-soft);direction:rtl;text-align:right;margin:0 0 8px}
+.rd-ar{font-family:var(--quran);font-size:26px;line-height:2.25;color:var(--gold-soft);direction:rtl;text-align:right;margin:0 0 10px}
 
 .rd-verses{max-width:760px;width:100%;margin:0 auto;padding:10px 16px 40px}
 .rd-suratitle{text-align:center;margin:4px 0 14px}
 .rd-suratitle .en{font-family:"Cormorant Garamond",serif;font-size:16px;color:var(--muted);letter-spacing:.02em}
-.rd-basmala{text-align:center;font-family:"Amiri",serif;font-size:23px;color:var(--gold-soft);opacity:.92;direction:rtl;margin:0 0 4px}
+.rd-basmala{text-align:center;font-family:var(--quran);font-size:28px;line-height:2.1;color:var(--gold-soft);opacity:.92;direction:rtl;margin:0 0 6px}
 .rd-basmala-en{text-align:center;font-family:"Spectral",Georgia,serif;font-size:13.5px;color:var(--muted);margin:0 0 20px;font-style:italic}
 .rd-nobasmala{text-align:center;font-family:"Cormorant Garamond",serif;font-style:italic;font-size:14.5px;color:var(--muted);margin:2px 0 6px}
 .rd-section{font-style:italic;color:var(--emerald);font-size:15px;text-align:center;font-family:"Cormorant Garamond",serif;margin:22px 0 8px}
@@ -459,11 +468,11 @@ header{
 .rd-words{display:flex;flex-wrap:wrap;gap:8px;direction:rtl;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
 .rd-word{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:64px;max-width:160px;
   padding:8px 10px;border:1px solid var(--line);border-radius:12px;background:rgba(19,33,27,.5)}
-.w-ar{font-family:"Amiri",serif;font-size:22px;color:var(--gold-soft);line-height:1.5;direction:rtl}
+.w-ar{font-family:var(--quran);font-size:25px;color:var(--gold-soft);line-height:1.7;direction:rtl}
 .w-tr{font-family:"Spectral",serif;font-size:11.5px;font-style:italic;color:var(--muted);direction:ltr}
 .w-en{font-family:"Spectral",serif;font-size:12.5px;color:var(--parch-dim);direction:ltr;text-align:center;line-height:1.35}
 .w-root{margin-top:3px;border:1px solid rgba(201,162,75,.35);background:rgba(201,162,75,.1);color:var(--gold-soft);
-  font-family:"Amiri",serif;font-size:14px;padding:1px 9px;border-radius:999px;cursor:pointer;direction:rtl;transition:.15s}
+  font-family:var(--quran);font-size:16px;padding:1px 10px;border-radius:999px;cursor:pointer;direction:rtl;transition:.15s}
 .w-root:hover{border-color:var(--gold);background:rgba(201,162,75,.2)}
 .rd-verse.rd-flash{background:rgba(201,162,75,.16);transition:background .3s}
 .rd-credit{max-width:760px;margin:26px auto 0;padding:0 16px;font-size:11px;color:var(--muted);opacity:.7;text-align:center}
