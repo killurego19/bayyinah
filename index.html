@@ -605,6 +605,8 @@ body.cc-open{overflow:hidden}
 .zk-l{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--parch-dim)}
 .zk-in{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:9px 10px;font-family:inherit;font-size:15px}
 .zk-in:focus{outline:none;border-color:var(--gold)}
+.zk-single{max-width:320px}
+.zk-single .zk-in{font-size:18px;padding:11px 13px}
 .zk-result{margin-top:13px;border-top:1px dashed var(--line);padding-top:12px}
 .zk-line{display:flex;justify-content:space-between;color:var(--parch-dim);font-size:14px;margin-bottom:7px}
 .zk-due{display:flex;justify-content:space-between;align-items:center;padding:11px 13px;border-radius:11px;
@@ -836,16 +838,9 @@ body.cc-open{overflow:hidden}
       <section class="tcard" id="tcZakat">
         <div class="tc-head"><span class="tc-ic">💰</span><h3 id="tlZakat">Zakat calculator</h3></div>
         <div class="tc-body">
-          <div class="zk-grid">
-            <label class="zk-l">Cash &amp; bank savings<input id="zkCash" class="zk-in" type="number" min="0" placeholder="0" inputmode="decimal"></label>
-            <label class="zk-l">Gold &amp; silver (value)<input id="zkGold" class="zk-in" type="number" min="0" placeholder="0" inputmode="decimal"></label>
-            <label class="zk-l">Business assets / investments<input id="zkBiz" class="zk-in" type="number" min="0" placeholder="0" inputmode="decimal"></label>
-            <label class="zk-l">Money owed to you<input id="zkOwed" class="zk-in" type="number" min="0" placeholder="0" inputmode="decimal"></label>
-            <label class="zk-l">Debts you owe (−)<input id="zkDebt" class="zk-in" type="number" min="0" placeholder="0" inputmode="decimal"></label>
-            <label class="zk-l">Nisāb threshold<input id="zkNisab" class="zk-in" type="number" min="0" placeholder="optional" inputmode="decimal"></label>
-          </div>
+          <label class="zk-l zk-single"><span id="zkIncomeL">Your income</span><input id="zkIncome" class="zk-in" type="number" min="0" placeholder="0" inputmode="decimal"></label>
           <div id="zkResult" class="zk-result"></div>
-          <p class="zk-note" id="zkNote">Zakat is 2.5% of the wealth you have held for one lunar year, if it is above the nisāb. This is a helper, not a fatwa.</p>
+          <p class="zk-note" id="zkNote">Zakat is a fixed 2.5% of your income, given to charity the day you receive it (6:141).</p>
         </div>
       </section>
 
@@ -1912,14 +1907,10 @@ function enableCompass(){
 function znum(id){ const el=document.getElementById(id); const v=parseFloat(el&&el.value); return isFinite(v)&&v>0?v:0; }
 function calcZakat(){
   const res=document.getElementById("zkResult"); if(!res) return;
-  const assets=znum("zkCash")+znum("zkGold")+znum("zkBiz")+znum("zkOwed");
-  const net=Math.max(0, assets-znum("zkDebt")), nisab=znum("zkNisab"), zak=net*0.025;
+  const income=znum("zkIncome"); const zak=income*0.025;
+  if(income<=0){ res.innerHTML=""; return; }
   const fmt=n=>n.toLocaleString(undefined,{maximumFractionDigits:2});
-  if(assets===0 && net===0){ res.innerHTML=""; return; }
-  let html=`<div class="zk-line"><span>${LANG==="Tamil"?"நிகர செல்வம்":"Net wealth"}</span><b>${fmt(net)}</b></div>`;
-  if(nisab>0 && net<nisab){ html+=`<div class="zk-due below">${LANG==="Tamil"?"நிசாபுக்குக் கீழே — ஜகாத் கடமையில்லை":"Below nisāb — no zakat is due"}</div>`; }
-  else { html+=`<div class="zk-due"><span>${LANG==="Tamil"?"செலுத்த வேண்டிய ஜகாத் (2.5%)":"Zakat due (2.5%)"}</span><b>${fmt(zak)}</b></div>`; }
-  res.innerHTML=html;
+  res.innerHTML=`<div class="zk-due"><span>${LANG==="Tamil"?"ஜகாத் (2.5%)":"Zakat (2.5%)"}</span><b>${fmt(zak)}</b></div>`;
 }
 
 /* ---- reminders + zikr ---- */
@@ -1981,6 +1972,7 @@ const TOOLLBL={
   tlBookmarks:["Bookmarks","நினைவுக்குறிகள்"], tlPrayer:["Prayer times","தொழுகை நேரங்கள்"],
   tlQibla:["Qibla finder","கிப்லா திசை"], tlZakat:["Zakat calculator","ஜகாத் கணிப்பான்"], tlRemind:["Reminders","நினைவூட்டல்கள்"],
   ptLocate:["Use my location","என் இடத்தைப் பயன்படுத்து"], qbStart:["Point me to the Qibla","கிப்லாவைக் காட்டு"], remEnable:["Enable notifications","அறிவிப்புகளை இயக்கு"],
+  zkIncomeL:["Your income","உங்கள் வருமானம்"], zkNote:["Zakat is a fixed 2.5% of your income, given to charity the day you receive it (6:141).","ஜகாத் என்பது உங்கள் வருமானத்தில் நிலையான 2.5% — பெறும் நாளிலேயே தானமாக வழங்கப்படுகிறது (6:141)."],
   remZikrL:["Zikr nudge — a gentle reminder to remember God through the day","திக்ர் — நாள் முழுவதும் கடவுளை நினைவுகூர மென்மையான நினைவூட்டல்"],
   remFajrL:["Read the Quran at Fajr","ஃபஜ்ரில் குர்ஆன் படியுங்கள்"], remMaghL:["Read the Quran at Maghrib","மஃக்ரிபில் குர்ஆன் படியுங்கள்"]
 };
@@ -1995,7 +1987,7 @@ function buildTools(){
     pm.addEventListener("change",()=>{ PT_METHOD=+pm.value; savePref("bayyinah.pt.method",PT_METHOD); if(PT_LOC) showPrayerTimes(PT_LOC); }); }
   const pl=document.getElementById("ptLocate"); if(pl) pl.addEventListener("click", locatePrayer);
   const qs=document.getElementById("qbStart"); if(qs) qs.addEventListener("click", startQibla);
-  ["zkCash","zkGold","zkBiz","zkOwed","zkDebt","zkNisab"].forEach(id=>{ const el=document.getElementById(id); if(el) el.addEventListener("input", calcZakat); });
+  const zi=document.getElementById("zkIncome"); if(zi) zi.addEventListener("input", calcZakat);
   const bl=document.getElementById("bkList");
   if(bl) bl.addEventListener("click",(e)=>{
     const go=e.target.closest(".bk-go"); if(go){ const p=go.getAttribute("data-ref").split(":").map(Number); navToVerse(p[0],p[1]); return; }
