@@ -20,6 +20,15 @@
   --line:#244238; --gold:#c9a24b; --gold-soft:#e3c987; --emerald:#4fae87;
   --parch:#f4ecd8; --parch-dim:#cdc6b2; --text:#e9e4d4; --muted:#9fae9f;
   --user:#1d3a30; --shadow:0 18px 50px -20px rgba(0,0,0,.7);
+  /* Quranic Arabic: self-hosted Madinah Mushaf script (always loads, incl. offline PWA),
+     then real Arabic system fonts, and only serif as a last resort — never Times New Roman. */
+  --quran:"UthmanicHafs","Amiri","Traditional Arabic","Geeza Pro","Sakkal Majalla","Noto Naskh Arabic",serif;
+}
+/* KFGQPC Uthmanic Hafs (standard-Unicode) — renders our diacritized Uthmani text. */
+@font-face{
+  font-family:"UthmanicHafs";
+  src:url("fonts/uthmanic-hafs.woff2") format("woff2");
+  font-weight:400;font-style:normal;font-display:swap;
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
@@ -361,8 +370,10 @@ header{
 .ib{position:fixed;left:0;right:0;bottom:0;z-index:60;max-width:560px;margin:0 auto;
   background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--gold);border-bottom:0;
   border-top-left-radius:16px;border-top-right-radius:16px;padding:15px 16px calc(15px + env(safe-area-inset-bottom));
-  box-shadow:0 -16px 44px -20px rgba(0,0,0,.85);animation:ibUp .3s ease both}
-@keyframes ibUp{from{transform:translateY(100%)}to{transform:none}}
+  box-shadow:0 -16px 44px -20px rgba(0,0,0,.85);animation:ibUp .3s ease}
+/* NB: no "both" fill-mode + a small 16px rise (not 100%) — so the sheet can never
+   get parked off-screen if the entry animation fails to run/complete. Resting = visible. */
+@keyframes ibUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
 .ib-row{display:flex;align-items:center;gap:13px}
 .ib-icon{width:44px;height:44px;border-radius:12px;flex:0 0 44px;border:1px solid var(--line)}
 .ib-title{font-family:"Cormorant Garamond",serif;font-size:18px;color:var(--gold-soft);line-height:1.1}
@@ -400,19 +411,19 @@ header{
   font-family:"Cormorant Garamond",serif;font-size:15px;padding:9px 12px;border-radius:12px;cursor:pointer;text-align:center;text-align-last:center}
 #rdSura:focus{outline:0;border-color:var(--gold)}
 
-.rd-opts{max-width:760px;width:100%;margin:2px auto 0;padding:0 16px;display:flex;justify-content:flex-end}
+.rd-opts{max-width:760px;width:100%;margin:2px auto 0;padding:0 16px;display:flex;justify-content:space-between;align-items:center;gap:8px}
 .rd-arbtn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:transparent;
   color:var(--muted);cursor:pointer;font-family:"Cormorant Garamond",serif;font-size:13px;padding:5px 13px;border-radius:999px;transition:.18s}
 .rd-arbtn .ae{font-family:"Amiri",serif;font-size:15px;line-height:1}
 .rd-arbtn:hover{border-color:var(--gold);color:var(--parch-dim)}
 .rd-arbtn.on{border-color:var(--gold);color:var(--gold-soft);background:rgba(201,162,75,.1)}
 .rd-arbtn.loading{opacity:.55;pointer-events:none}
-.rd-ar{font-family:"Amiri",serif;font-size:22px;line-height:1.95;color:var(--gold-soft);direction:rtl;text-align:right;margin:0 0 8px}
+.rd-ar{font-family:var(--quran);font-size:26px;line-height:2.25;color:var(--gold-soft);direction:rtl;text-align:right;margin:0 0 10px}
 
 .rd-verses{max-width:760px;width:100%;margin:0 auto;padding:10px 16px 40px}
 .rd-suratitle{text-align:center;margin:4px 0 14px}
 .rd-suratitle .en{font-family:"Cormorant Garamond",serif;font-size:16px;color:var(--muted);letter-spacing:.02em}
-.rd-basmala{text-align:center;font-family:"Amiri",serif;font-size:23px;color:var(--gold-soft);opacity:.92;direction:rtl;margin:0 0 4px}
+.rd-basmala{text-align:center;font-family:var(--quran);font-size:28px;line-height:2.1;color:var(--gold-soft);opacity:.92;direction:rtl;margin:0 0 6px}
 .rd-basmala-en{text-align:center;font-family:"Spectral",Georgia,serif;font-size:13.5px;color:var(--muted);margin:0 0 20px;font-style:italic}
 .rd-nobasmala{text-align:center;font-family:"Cormorant Garamond",serif;font-style:italic;font-size:14.5px;color:var(--muted);margin:2px 0 6px}
 .rd-section{font-style:italic;color:var(--emerald);font-size:15px;text-align:center;font-family:"Cormorant Garamond",serif;margin:22px 0 8px}
@@ -448,6 +459,180 @@ header{
   .rd-bar{margin-top:10px}
   .rd-verses{padding:8px 14px 40px}
   .rd-vtext{font-size:16px}
+}
+
+/* ===== word-by-word + root concordance ===== */
+.rd-act.rd-words-btn{color:var(--parch-dim)}
+.rd-act.rd-words-btn:hover{border-color:var(--gold);color:var(--gold-soft)}
+.rd-act.loading{opacity:.55;pointer-events:none}
+.rd-words{display:flex;flex-wrap:wrap;gap:8px;direction:rtl;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
+.rd-word{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:64px;max-width:160px;
+  padding:8px 10px;border:1px solid var(--line);border-radius:12px;background:rgba(19,33,27,.5)}
+.w-ar{font-family:var(--quran);font-size:25px;color:var(--gold-soft);line-height:1.7;direction:rtl}
+.w-tr{font-family:"Spectral",serif;font-size:11.5px;font-style:italic;color:var(--muted);direction:ltr}
+.w-en{font-family:"Spectral",serif;font-size:12.5px;color:var(--parch-dim);direction:ltr;text-align:center;line-height:1.35}
+.w-root{margin-top:3px;border:1px solid rgba(201,162,75,.35);background:rgba(201,162,75,.1);color:var(--gold-soft);
+  font-family:var(--quran);font-size:16px;padding:1px 10px;border-radius:999px;cursor:pointer;direction:rtl;transition:.15s}
+.w-root:hover{border-color:var(--gold);background:rgba(201,162,75,.2)}
+.rd-verse.rd-flash{background:rgba(201,162,75,.16);transition:background .3s}
+.rd-credit{max-width:760px;margin:26px auto 0;padding:0 16px;font-size:11px;color:var(--muted);opacity:.7;text-align:center}
+.rd-credit a{color:var(--muted)}
+
+/* concordance sheet */
+body.cc-open{overflow:hidden}
+.cc{position:fixed;inset:0;z-index:70;background:rgba(6,11,9,.66);display:flex;align-items:flex-end;justify-content:center}
+/* An author `display` rule beats the UA `[hidden]{display:none}`, so the `hidden`
+   attribute alone would NOT hide these — re-assert it with higher specificity. */
+.cc[hidden],.sb-install[hidden],.rd-np[hidden]{display:none}
+.cc-panel{width:100%;max-width:620px;max-height:82vh;display:flex;flex-direction:column;
+  background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--gold);border-bottom:0;
+  border-top-left-radius:18px;border-top-right-radius:18px;box-shadow:0 -20px 50px -20px rgba(0,0,0,.85);animation:ibUp .28s ease}
+.cc-head{display:flex;align-items:center;gap:10px;padding:14px 16px 10px;border-bottom:1px solid var(--line)}
+.cc-title{flex:1;font-family:"Cormorant Garamond",serif;font-size:17px;color:var(--gold-soft)}
+.cc-close{background:none;border:0;color:var(--muted);font-size:24px;line-height:1;cursor:pointer;padding:0 6px}
+.cc-close:hover{color:var(--parch)}
+.cc-list{overflow-y:auto;padding:8px 10px calc(14px + env(safe-area-inset-bottom))}
+.cc-item{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid rgba(36,66,56,.4);background:none;cursor:pointer;
+  font-family:"Spectral",serif;font-size:14.5px;color:var(--parch-dim);padding:11px 8px;line-height:1.45}
+.cc-item:hover{color:var(--parch);background:rgba(24,43,35,.5)}
+.cc-ref{font-family:"Cormorant Garamond",serif;font-weight:600;color:var(--gold-soft);margin-right:8px}
+
+/* ===== audio recitation ===== */
+.rd-recsel{background:var(--panel);border:1px solid var(--line);color:var(--parch-dim);font-family:"Cormorant Garamond",serif;
+  font-size:13px;padding:5px 10px;border-radius:999px;cursor:pointer;max-width:52%}
+.rd-recsel:focus{outline:0;border-color:var(--gold)}
+.rd-act.rd-play{color:var(--parch-dim)}
+.rd-act.rd-play:hover{border-color:var(--emerald);color:var(--parch)}
+.rd-act.rd-play svg{width:13px;height:13px}
+.rd-verse.playing{background:rgba(79,174,135,.12)}
+.rd-verse.playing .rd-vnum{background:var(--emerald);color:#08130e;animation:npPulse 1.4s ease-in-out infinite}
+@keyframes npPulse{0%,100%{box-shadow:0 0 0 0 rgba(79,174,135,.5)}50%{box-shadow:0 0 0 5px rgba(79,174,135,0)}}
+.rd-np{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:55;
+  display:inline-flex;align-items:center;gap:9px;border:1px solid var(--emerald);border-radius:999px;cursor:pointer;
+  background:linear-gradient(160deg,var(--panel2),var(--panel));color:var(--parch);font-family:"Cormorant Garamond",serif;
+  font-size:15px;padding:9px 18px;box-shadow:0 10px 30px -10px rgba(0,0,0,.8)}
+.rd-np svg{width:13px;height:13px;color:var(--emerald)}
+.rd-np:hover{border-color:var(--gold)}
+
+/* ===================== Companion: verse icons, range, Tools ===================== */
+/* per-verse icon actions (bookmark / copy / share) */
+.rd-actsp{flex:1 1 auto}
+.rd-ico{display:inline-grid;place-items:center;width:34px;height:30px;border:1px solid var(--line);border-radius:9px;
+  background:transparent;color:var(--muted);cursor:pointer;transition:.15s;padding:0}
+.rd-ico svg{width:17px;height:17px}
+.rd-ico:hover{border-color:var(--gold);color:var(--parch)}
+.rd-ico.rd-bookmark.on{color:var(--gold);border-color:rgba(201,162,75,.5)}
+.rd-ico.rd-bookmark.on svg path{fill:var(--gold);stroke:var(--gold)}
+.rd-ico.copied{color:var(--emerald);border-color:var(--emerald)}
+
+/* range auto-read panel */
+.rd-range{margin:0 14px 10px;padding:12px 14px;border:1px solid var(--line);border-radius:14px;
+  background:rgba(16,28,23,.6);display:flex;flex-direction:column;gap:9px}
+.rr-row{display:flex;align-items:center;gap:8px}
+.rr-lab{width:44px;color:var(--muted);font-size:13px}
+.rr-sel{flex:1;min-width:0;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:9px;padding:7px 8px;font-family:inherit;font-size:13px}
+.rr-x{color:var(--muted)}
+.rr-num{width:64px;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:9px;padding:7px 8px;font-family:inherit;font-size:14px;text-align:center}
+.rr-actions{display:flex;align-items:center;gap:12px;margin-top:2px}
+.rr-play{border:0;border-radius:10px;padding:9px 16px;cursor:pointer;font-family:inherit;font-size:14px;font-weight:600;
+  background:linear-gradient(160deg,var(--gold-soft),var(--gold));color:#1a1206}
+.rr-play:hover{filter:brightness(1.06)}
+.rr-hint{color:var(--muted);font-size:12.5px}
+
+/* Tools section */
+#tools{display:none}
+.tooling #chat,.tooling .composer,.tooling #reader{display:none}
+.tooling #tools{display:flex;flex-direction:column;flex:1;overflow-y:auto;scroll-behavior:smooth}
+.tools-inner{max-width:640px;width:100%;margin:0 auto;padding:14px 18px calc(40px + env(safe-area-inset-bottom))}
+.tools-head{text-align:center;padding:14px 6px 20px}
+.tools-emblem{font-family:"Amiri",serif;font-size:40px;color:var(--gold-soft);opacity:.85;line-height:1}
+.tools-head h2{font-family:"Cormorant Garamond",serif;font-weight:600;font-size:27px;color:var(--parch);margin:6px 0 6px}
+.tools-head p{color:var(--parch-dim);font-size:14px;line-height:1.6;margin:0;max-width:440px;margin-inline:auto}
+.tcard{border:1px solid var(--line);border-radius:16px;background:linear-gradient(180deg,rgba(24,43,35,.5),rgba(16,28,23,.5));
+  margin-bottom:14px;overflow:hidden}
+.tc-head{display:flex;align-items:center;gap:11px;padding:14px 16px;border-bottom:1px solid rgba(36,66,56,.5)}
+.tc-ic{width:34px;height:34px;flex:0 0 34px;border-radius:10px;display:grid;place-items:center;font-size:18px;
+  background:rgba(201,162,75,.12);border:1px solid rgba(201,162,75,.25)}
+.tc-head h3{margin:0;font-family:"Cormorant Garamond",serif;font-weight:600;font-size:19px;color:var(--gold-soft)}
+.tc-body{padding:14px 16px}
+.t-btn{border:1px solid var(--line);background:rgba(24,43,35,.55);color:var(--parch);cursor:pointer;font-family:inherit;
+  font-size:14px;padding:10px 15px;border-radius:11px;transition:.18s}
+.t-btn:hover{border-color:var(--gold)}
+.t-btn.primary{background:linear-gradient(160deg,var(--gold-soft),var(--gold));color:#1a1206;border-color:transparent;font-weight:600}
+.t-btn:disabled{opacity:.6;cursor:default}
+.t-sel{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:9px 10px;font-family:inherit;font-size:13.5px}
+
+/* bookmarks */
+.bk-list{display:flex;flex-direction:column;gap:8px}
+.bk-empty{color:var(--muted);font-size:14px;line-height:1.6;text-align:center;padding:10px 4px}
+.bk-item{display:flex;align-items:stretch;gap:8px}
+.bk-go{flex:1;min-width:0;text-align:left;border:1px solid var(--line);border-radius:11px;background:rgba(16,28,23,.5);
+  cursor:pointer;padding:10px 12px;display:flex;gap:10px;align-items:baseline;transition:.15s}
+.bk-go:hover{border-color:var(--gold)}
+.bk-ref{flex:0 0 auto;font-family:"Cormorant Garamond",serif;color:var(--gold-soft);font-size:14px}
+.bk-txt{color:var(--parch-dim);font-size:13.5px;line-height:1.5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bk-del{flex:0 0 auto;width:38px;border:1px solid var(--line);border-radius:11px;background:transparent;color:var(--muted);
+  font-size:20px;cursor:pointer;line-height:1}
+.bk-del:hover{border-color:#a5564e;color:#e88}
+
+/* prayer times */
+.pt-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:6px}
+.pt-result{margin-top:8px}
+.pt-row{display:flex;justify-content:space-between;align-items:center;padding:11px 13px;border:1px solid var(--line);
+  border-radius:11px;margin-bottom:7px;background:rgba(16,28,23,.4)}
+.pt-row.next{border-color:var(--emerald);background:rgba(79,174,135,.1)}
+.pt-name{color:var(--parch);font-size:15px}
+.pt-row.next .pt-name::after{content:" • next";color:var(--emerald);font-size:12px}
+.pt-time{font-family:"Cormorant Garamond",serif;color:var(--gold-soft);font-size:17px}
+.pt-loc{color:var(--muted);font-size:12px;text-align:center;margin-top:6px}
+.pt-err{color:#e0a; color:#dd9; font-size:13.5px;text-align:center;padding:6px}
+
+/* qibla */
+.qb-wrap{display:flex;gap:16px;align-items:center;flex-wrap:wrap;justify-content:center;margin-bottom:14px}
+.qb-dial{position:relative;width:170px;height:170px;flex:0 0 170px;border-radius:50%;border:2px solid var(--line);
+  background:radial-gradient(circle at 50% 42%,rgba(79,174,135,.1),transparent 68%)}
+.qb-n{position:absolute;top:5px;left:50%;transform:translateX(-50%);font-size:12px;color:var(--muted);font-weight:600}
+.qb-needle{position:absolute;left:50%;bottom:50%;width:0;height:0;transform-origin:bottom center;
+  transform:translateX(-50%) rotate(0deg);transition:transform .18s ease-out;
+  border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:72px solid var(--gold)}
+.qb-kaaba{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:16px;opacity:.8}
+.qb-info{text-align:center;min-width:120px}
+.qb-bearing{font-family:"Cormorant Garamond",serif;font-size:30px;color:var(--gold-soft)}
+.qb-note{color:var(--muted);font-size:12.5px;line-height:1.5;margin-top:4px}
+
+/* zakat */
+.zk-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.zk-l{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--parch-dim)}
+.zk-in{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:9px 10px;font-family:inherit;font-size:15px}
+.zk-in:focus{outline:none;border-color:var(--gold)}
+.zk-single{max-width:320px}
+.zk-single .zk-in{font-size:18px;padding:11px 13px}
+.zk-result{margin-top:13px;border-top:1px dashed var(--line);padding-top:12px}
+.zk-line{display:flex;justify-content:space-between;color:var(--parch-dim);font-size:14px;margin-bottom:7px}
+.zk-due{display:flex;justify-content:space-between;align-items:center;padding:11px 13px;border-radius:11px;
+  background:rgba(79,174,135,.12);border:1px solid var(--emerald);color:var(--parch);font-size:15px}
+.zk-due b{font-family:"Cormorant Garamond",serif;color:var(--gold-soft);font-size:20px}
+.zk-due.below{background:rgba(201,162,75,.08);border-color:var(--line);color:var(--muted);font-size:13.5px;justify-content:center}
+.zk-note{color:var(--muted);font-size:12px;line-height:1.5;margin:11px 0 0}
+
+/* reminders */
+.zikr-now{margin-bottom:14px}
+.zk-quote{border-inline-start:3px solid var(--gold);padding:8px 0 8px 13px;color:var(--parch);font-family:"Cormorant Garamond",serif;
+  font-size:17px;line-height:1.5;font-style:italic}
+.rem-toggle{display:flex;align-items:flex-start;gap:10px;padding:9px 2px;color:var(--parch-dim);font-size:14px;line-height:1.5;cursor:pointer}
+.rem-toggle input{margin-top:3px;width:17px;height:17px;accent-color:var(--emerald);flex:0 0 auto}
+.rem-note{color:var(--muted);font-size:12.5px;line-height:1.55;margin:10px 0 0}
+.tools-foot{color:var(--muted);font-size:11.5px;text-align:center;line-height:1.5;padding:6px 10px 0}
+
+/* toast */
+.b-toast{position:fixed;left:50%;bottom:calc(80px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(10px);
+  background:var(--panel2);border:1px solid var(--emerald);color:var(--parch);padding:9px 16px;border-radius:999px;
+  font-size:13.5px;z-index:90;opacity:0;pointer-events:none;transition:.25s;box-shadow:0 10px 30px -10px rgba(0,0,0,.8)}
+.b-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media(max-width:560px){
+  .zk-grid{grid-template-columns:1fr}
+  .tools-inner{padding:12px 14px calc(40px + env(safe-area-inset-bottom))}
 }
 </style>
 
@@ -560,6 +745,10 @@ header{
       <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H12v16H6.5A2.5 2.5 0 0 0 4 21.5V5.5zM20 5.5A2.5 2.5 0 0 0 17.5 3H12v16h5.5A2.5 2.5 0 0 1 20 21.5V5.5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
       <span class="lbl">Read</span>
     </button>
+    <button id="tabTools" class="modetab" role="tab" aria-selected="false" onclick="setMode('tools')">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" stroke="currentColor" stroke-width="1.5"/><path d="M19.4 13a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-2.87 1.2V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 7 19.4a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 2.6 14H2.5a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4 7.6l-.06-.06a2 2 0 1 1 2.83-2.83L6.83 5A1.7 1.7 0 0 0 9 5.4V5.5a2 2 0 1 1 4 0v.09A1.7 1.7 0 0 0 17 4.6l.06.06a2 2 0 1 1 2.83 2.83L19.83 7.6A1.7 1.7 0 0 0 21.4 10H21.5a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.57 1z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+      <span class="lbl">Tools</span>
+    </button>
   </div>
 
   <div id="chat"></div>
@@ -571,11 +760,104 @@ header{
       <button class="rd-nav" id="rdNext" aria-label="Next sura"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     </div>
     <div class="rd-opts">
+      <select id="rdReciter" class="rd-recsel" aria-label="Reciter"></select>
       <button id="rdArabic" class="rd-arbtn" type="button" onclick="toggleArabic()" aria-label="Toggle Arabic text">
         <span class="ae" aria-hidden="true">ع</span> <span class="albl">Arabic</span>
       </button>
+      <button id="rdRangeBtn" class="rd-arbtn" type="button" aria-label="Auto-read a range">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 5l12 7-12 7V5z" fill="currentColor"/><path d="M3 5v14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span class="rlbl">Auto-read</span>
+      </button>
+    </div>
+    <div id="rdRange" class="rd-range" hidden>
+      <div class="rr-row">
+        <span class="rr-lab">From</span>
+        <select id="rrFromS" class="rr-sel" aria-label="From sura"></select>
+        <span class="rr-x">:</span>
+        <input id="rrFromV" class="rr-num" type="number" min="1" value="1" inputmode="numeric" aria-label="From verse">
+      </div>
+      <div class="rr-row">
+        <span class="rr-lab">To</span>
+        <select id="rrToS" class="rr-sel" aria-label="To sura"></select>
+        <span class="rr-x">:</span>
+        <input id="rrToV" class="rr-num" type="number" min="1" value="7" inputmode="numeric" aria-label="To verse">
+      </div>
+      <div class="rr-actions">
+        <button id="rrPlay" class="rr-play" type="button">▶ Play range</button>
+        <span id="rrHint" class="rr-hint"></span>
+      </div>
     </div>
     <div class="rd-verses" id="rdVerses"></div>
+  </div>
+  <audio id="rdAudio" preload="none"></audio>
+  <button id="rdNowPlaying" class="rd-np" type="button" hidden aria-label="Stop recitation">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>
+    <span id="rdNpText"></span>
+  </button>
+
+  <div id="tools" aria-hidden="true">
+    <div class="tools-inner">
+      <div class="tools-head">
+        <div class="tools-emblem">۞</div>
+        <h2 id="toolsTitle">Your Quran companion</h2>
+        <p id="toolsSub">Bookmarks, prayer times, Qibla direction, Zakat, and gentle reminders — all in one place.</p>
+      </div>
+
+      <section class="tcard" id="tcBookmarks">
+        <div class="tc-head"><span class="tc-ic">🔖</span><h3 id="tlBookmarks">Bookmarks</h3></div>
+        <div class="tc-body"><div id="bkList" class="bk-list"></div></div>
+      </section>
+
+      <section class="tcard" id="tcPrayer">
+        <div class="tc-head"><span class="tc-ic">🕌</span><h3 id="tlPrayer">Prayer times</h3></div>
+        <div class="tc-body">
+          <div class="pt-controls">
+            <button id="ptLocate" class="t-btn primary" type="button">Use my location</button>
+            <select id="ptMethod" class="t-sel" aria-label="Calculation method"></select>
+          </div>
+          <div id="ptResult" class="pt-result"></div>
+        </div>
+      </section>
+
+      <section class="tcard" id="tcQibla">
+        <div class="tc-head"><span class="tc-ic">🧭</span><h3 id="tlQibla">Qibla finder</h3></div>
+        <div class="tc-body">
+          <div class="qb-wrap">
+            <div class="qb-dial" id="qbDial">
+              <div class="qb-ticks"></div>
+              <div class="qb-needle" id="qbNeedle"><span class="qb-tip"></span></div>
+              <div class="qb-kaaba" id="qbKaaba">🕋</div>
+              <div class="qb-n">N</div>
+            </div>
+            <div class="qb-info"><div id="qbBearing" class="qb-bearing">—°</div><div id="qbNote" class="qb-note">Tap below and allow location + motion to find the direction of the Kaaba.</div></div>
+          </div>
+          <button id="qbStart" class="t-btn primary" type="button">Point me to the Qibla</button>
+        </div>
+      </section>
+
+      <section class="tcard" id="tcZakat">
+        <div class="tc-head"><span class="tc-ic">💰</span><h3 id="tlZakat">Zakat calculator</h3></div>
+        <div class="tc-body">
+          <label class="zk-l zk-single"><span id="zkIncomeL">Your income</span><input id="zkIncome" class="zk-in" type="number" min="0" placeholder="0" inputmode="decimal"></label>
+          <div id="zkResult" class="zk-result"></div>
+          <p class="zk-note" id="zkNote">Zakat is a fixed 2.5% of your income, given to charity the day you receive it (6:141).</p>
+        </div>
+      </section>
+
+      <section class="tcard" id="tcRemind">
+        <div class="tc-head"><span class="tc-ic">🔔</span><h3 id="tlRemind">Reminders</h3></div>
+        <div class="tc-body">
+          <div id="zikrNow" class="zikr-now"></div>
+          <label class="rem-toggle"><input type="checkbox" id="remZikr"><span id="remZikrL">Zikr nudge — a gentle reminder to remember God through the day</span></label>
+          <label class="rem-toggle"><input type="checkbox" id="remFajr"><span id="remFajrL">Read the Quran at Fajr</span></label>
+          <label class="rem-toggle"><input type="checkbox" id="remMagh"><span id="remMaghL">Read the Quran at Maghrib</span></label>
+          <button id="remEnable" class="t-btn" type="button">Enable notifications</button>
+          <p id="remNote" class="rem-note"></p>
+        </div>
+      </section>
+
+      <div class="tools-foot" id="toolsFoot">Prayer times are computed on your device. Times are approximate — verify against your local mosque.</div>
+    </div>
   </div>
 
   <div class="composer">
@@ -587,6 +869,13 @@ header{
     </div>
   </div>
 </div>
+</div>
+
+<div id="concord" class="cc" hidden role="dialog" aria-label="Root concordance">
+  <div class="cc-panel">
+    <div class="cc-head"><div class="cc-title" id="ccTitle"></div><button class="cc-close" id="ccClose" aria-label="Close">&times;</button></div>
+    <div class="cc-list" id="ccList"></div>
+  </div>
 </div>
 
 <div id="installBanner" class="ib" hidden role="dialog" aria-label="Install Bayyinah">
@@ -1004,18 +1293,21 @@ renderWelcomeIfEmpty();
 const READER_KEY="bayyinah.reader.sura", AR_KEY="bayyinah.reader.arabic";
 let rdCur=0, rdBuilt=false, AR=null, arOn=false, TAM=null;
 function setMode(mode){
-  const read = mode==="read";
+  const read = mode==="read", tools = mode==="tools";
+  if(!read && typeof stopAudio==="function") stopAudio();   // leaving Read stops recitation
   document.body.classList.toggle("reading", read);
-  const a=document.getElementById("tabAsk"), r=document.getElementById("tabRead");
-  if(a){ a.classList.toggle("on",!read); a.setAttribute("aria-selected", read?"false":"true"); }
-  if(r){ r.classList.toggle("on",read); r.setAttribute("aria-selected", read?"true":"false"); }
+  document.body.classList.toggle("tooling", tools);
+  const setTab=(id,on)=>{ const el=document.getElementById(id); if(el){ el.classList.toggle("on",on); el.setAttribute("aria-selected", on?"true":"false"); } };
+  setTab("tabAsk", !read && !tools); setTab("tabRead", read); setTab("tabTools", tools);
   const rd=document.getElementById("reader"); if(rd) rd.setAttribute("aria-hidden", read?"false":"true");
+  const tl=document.getElementById("tools"); if(tl) tl.setAttribute("aria-hidden", tools?"false":"true");
   if(read){
     if(!rdBuilt) buildReader();
     if(!rdCur){ let s=1; try{ s=parseInt(localStorage.getItem(READER_KEY))||1; }catch(e){} renderSura(s); }
     if(arOn && !AR) loadArabic().then(()=>{ if(rdCur) renderSura(rdCur); });
     if(LANG==="Tamil" && !TAM) loadTamil().then(()=>{ if(rdCur) renderSura(rdCur); });
   }
+  if(tools && typeof buildTools==="function"){ buildTools(); renderBookmarks(); }
 }
 function enterAskMode(){ setMode("ask"); }
 function buildReader(){
@@ -1028,15 +1320,129 @@ function buildReader(){
   updateArabicBtn();
   document.getElementById("rdVerses").addEventListener("click",(e)=>{
     const fb=e.target.closest(".rd-foot-btn"); if(fb){ fb.closest(".rd-foot").classList.toggle("open"); return; }
+    const rt=e.target.closest(".w-root"); if(rt){ openConcordance(rt.getAttribute("data-root")); return; }
+    const pb=e.target.closest(".rd-play"); if(pb){ const r=pb.closest(".rd-verse").querySelector(".rd-vnum").textContent.split(":"); playVerse(+r[0],+r[1]); return; }
+    const wb=e.target.closest(".rd-words-btn"); if(wb){ const r=wb.closest(".rd-verse").querySelector(".rd-vnum").textContent.split(":"); showWords(wb.closest(".rd-verse"), +r[0], +r[1]); return; }
     const ex=e.target.closest(".rd-explain"); if(ex){ const r=ex.closest(".rd-verse").querySelector(".rd-vnum").textContent.split(":"); explainVerse(+r[0],+r[1]); return; }
     const di=e.target.closest(".rd-discuss"); if(di){ const r=di.closest(".rd-verse").querySelector(".rd-vnum").textContent.split(":"); discussVerse(+r[0],+r[1]); return; }
+    const bm=e.target.closest(".rd-bookmark"); if(bm){ const r=bm.closest(".rd-verse").querySelector(".rd-vnum").textContent.split(":"); toggleBookmark(+r[0],+r[1],bm); return; }
+    const cp=e.target.closest(".rd-copy"); if(cp){ const r=cp.closest(".rd-verse").querySelector(".rd-vnum").textContent.split(":"); copyVerse(+r[0],+r[1],cp); return; }
+    const sh=e.target.closest(".rd-share"); if(sh){ const r=sh.closest(".rd-verse").querySelector(".rd-vnum").textContent.split(":"); shareVerse(+r[0],+r[1],sh); return; }
     const vs=e.target.closest(".rd-verse"); if(vs) vs.classList.toggle("active");
   });
+  buildReciter();
+  const np=document.getElementById("rdNowPlaying"); if(np) np.addEventListener("click", stopAudio);
+  const cc=document.getElementById("concord");
+  if(cc){
+    const cl=document.getElementById("ccClose"); if(cl) cl.addEventListener("click", closeConcordance);
+    cc.addEventListener("click",(e)=>{ if(e.target===cc) closeConcordance(); });
+    document.getElementById("ccList").addEventListener("click",(e)=>{ const it=e.target.closest(".cc-item"); if(it){ const r=it.getAttribute("data-ref").split(":"); navToVerse(+r[0],+r[1]); } });
+  }
   rdBuilt=true;
 }
 function footLabel(){ return LANG==="Tamil"?"அடிக்குறிப்பு":"Footnote"; }
 function explainLabel(){ return LANG==="Tamil"?"விளக்கம்":"Explain"; }
 function discussLabel(){ return LANG==="Tamil"?"கலந்துரையாடு":"Discuss"; }
+function wordsLabel(){ return LANG==="Tamil"?"வார்த்தைகள்":"Words"; }
+
+/* ---------- Word-by-word + root concordance (data from WikiSubmission, MIT) ---------- */
+let WBW={}, ROOTS=null;
+async function loadWbw(s){ if(WBW[s]) return WBW[s]; try{ const r=await fetch("wbw/"+s+".json"); if(r.ok) WBW[s]=await r.json(); }catch(e){} return WBW[s]; }
+async function loadRoots(){ if(ROOTS) return ROOTS; try{ const r=await fetch("roots.json"); if(r.ok) ROOTS=await r.json(); }catch(e){} return ROOTS; }
+async function showWords(verseEl,s,v){
+  if(!verseEl) return;
+  const existing=verseEl.querySelector(".rd-words");
+  if(existing){ existing.remove(); return; }                 // toggle off
+  const btn=verseEl.querySelector(".rd-words-btn"); if(btn) btn.classList.add("loading");
+  const data=await loadWbw(s);
+  if(btn) btn.classList.remove("loading");
+  const words=data && data[String(v)];
+  if(!words){ return; }
+  let html='<div class="rd-words">';
+  for(const w of words){
+    const ar=w[0]||"", tr=w[1]||"", en=w[2]||"", root=w[3]||"";
+    html+=`<div class="rd-word"><div class="w-ar">${esc(ar)}</div><div class="w-tr">${esc(tr)}</div><div class="w-en">${esc(en)}</div>${root?`<button class="w-root" type="button" data-root="${esc(root)}">${esc(root)}</button>`:""}</div>`;
+  }
+  html+='</div>';
+  verseEl.querySelector(".rd-vbody").insertAdjacentHTML("beforeend", html);
+}
+async function openConcordance(root){
+  const cc=document.getElementById("concord"); if(!cc) return;
+  document.getElementById("ccTitle").textContent = (LANG==="Tamil"?"மூலம்":"Root")+" "+root+" …";
+  document.getElementById("ccList").innerHTML="";
+  cc.hidden=false; document.body.classList.add("cc-open");
+  const R=await loadRoots(); const entry=R && R[root];
+  if(!entry){ document.getElementById("ccTitle").textContent = root; return; }
+  const refs=entry.r||[]; const cnt=entry.c||refs.length;
+  document.getElementById("ccTitle").textContent = `${LANG==="Tamil"?"மூலம்":"Root"} ${root} · ${LANG==="Tamil"?`${refs.length} வசனங்கள்`:`${refs.length} verses`} (${cnt}×)`;
+  let html="";
+  for(const ref of refs){ const x=byKey[ref]; const txt=x?esc(x.text).slice(0,90):""; html+=`<button class="cc-item" type="button" data-ref="${ref}"><span class="cc-ref">${ref}</span> ${txt}</button>`; }
+  document.getElementById("ccList").innerHTML=html;
+}
+function closeConcordance(){ const cc=document.getElementById("concord"); if(cc) cc.hidden=true; document.body.classList.remove("cc-open"); }
+function navToVerse(s,v){
+  closeConcordance();
+  setMode("read");
+  if(s!==rdCur) renderSura(s);
+  setTimeout(function(){
+    const el=[...document.querySelectorAll("#rdVerses .rd-verse")].find(x=>x.querySelector(".rd-vnum").textContent===s+":"+v);
+    if(el){ el.scrollIntoView({block:"center"}); el.classList.add("rd-flash"); setTimeout(()=>el.classList.remove("rd-flash"),1300); }
+  }, s!==rdCur?60:0);
+}
+
+/* ---------- Arabic audio recitation (everyayah.com, keyed by sura:ayah) ---------- */
+const RECITER_KEY="bayyinah.reader.reciter";
+const RECITERS=[["Alafasy_128kbps","Mishary Alafasy"],["Abdul_Basit_Murattal_192kbps","Abdul Basit"],["Husary_128kbps","Al-Husary"],["Minshawy_Murattal_128kbps","Al-Minshawi"],["Abdurrahmaan_As-Sudais_192kbps","Al-Sudais"]];
+let reciter="Alafasy_128kbps", playingRef=null;
+function playLabel(){ return LANG==="Tamil"?"ஒலி":"Play"; }
+function pad3(n){ n=String(n); return "000".slice(n.length)+n; }
+function audioUrl(s,v){ return "https://everyayah.com/data/"+reciter+"/"+pad3(s)+pad3(v)+".mp3"; }
+function verseElByRef(s,v){ return [...document.querySelectorAll("#rdVerses .rd-verse")].find(x=>x.querySelector(".rd-vnum").textContent===s+":"+v); }
+function setNowPlaying(s,v){
+  document.querySelectorAll("#rdVerses .rd-verse.playing").forEach(e=>e.classList.remove("playing"));
+  const np=document.getElementById("rdNowPlaying");
+  if(s){ const el=verseElByRef(s,v); if(el){ el.classList.add("playing"); el.scrollIntoView({block:"center"}); } const t=document.getElementById("rdNpText"); if(t) t.textContent=s+":"+v; if(np) np.hidden=false; }
+  else if(np) np.hidden=true;
+}
+let rangeEnd=null;   // [s,v] inclusive — set only during range auto-read
+function nextRef(s,v){
+  if(byKey[s+":"+(v+1)]) return [s,v+1];
+  for(let ns=s+1; ns<=114; ns++){ if(byKey[ns+":1"]) return [ns,1]; }  // flow into next sura
+  return null;
+}
+function stopAudio(){ const A=document.getElementById("rdAudio"); if(A){ A.pause(); A.onended=null; A.onerror=null; } playingRef=null; rangeEnd=null; setNowPlaying(null); }
+function playAt(s,v){
+  const A=document.getElementById("rdAudio"); if(!A) return;
+  if(s!==rdCur) renderSura(s,true);                 // show target sura WITHOUT cancelling playback
+  A.src=audioUrl(s,v); A.play().catch(function(){});
+  playingRef=[s,v]; setNowPlaying(s,v);
+  A.onended=function(){ advanceAfter(s,v); };
+  A.onerror=function(){ stopAudio(); };
+}
+function advanceAfter(s,v){
+  if(rangeEnd && s===rangeEnd[0] && v===rangeEnd[1]){ stopAudio(); return; }   // reached the end of the range
+  let nx;
+  if(rangeEnd){ nx=nextRef(s,v); }                          // range mode: continue across suras
+  else { nx = byKey[s+":"+(v+1)] ? [s,v+1] : null; }        // single tap: stop at the end of this sura
+  if(nx){ playAt(nx[0],nx[1]); } else { stopAudio(); }
+}
+function playVerse(s,v){
+  if(playingRef && playingRef[0]===s && playingRef[1]===v){ stopAudio(); return; }   // tap again = stop
+  rangeEnd=null;                                   // a manual tap ends any range auto-read
+  playAt(s,v);
+}
+function playRange(fs,fv,ts,tv){
+  stopAudio();                                     // (also clears rangeEnd)
+  rangeEnd=[ts,tv];
+  playAt(fs,fv);
+}
+function buildReciter(){
+  const sel=document.getElementById("rdReciter"); if(!sel) return;
+  sel.innerHTML=RECITERS.map(r=>`<option value="${r[0]}">${esc(r[1])}</option>`).join("");
+  try{ const saved=localStorage.getItem(RECITER_KEY); if(saved) reciter=saved; }catch(e){}
+  sel.value=reciter;
+  sel.addEventListener("change",function(){ reciter=sel.value; try{ localStorage.setItem(RECITER_KEY,reciter); }catch(e){} if(playingRef) playAt(playingRef[0],playingRef[1]); });
+}
 
 /* Explain a specific verse — grounds on that verse + neighbours + footnote + appendices, answers via the existing chat */
 async function explainVerse(s,v){
@@ -1104,8 +1510,10 @@ async function toggleArabic(){
   if(arOn && !AR){ if(b) b.classList.add("loading"); await loadArabic(); if(b) b.classList.remove("loading"); }
   if(rdCur) renderSura(rdCur);
 }
-function renderSura(n){
-  n=Math.min(114,Math.max(1,n|0)); rdCur=n;
+function renderSura(n, keepAudio){
+  n=Math.min(114,Math.max(1,n|0));
+  if(n!==rdCur && !keepAudio && typeof stopAudio==="function") stopAudio();   // manual sura change stops playback
+  rdCur=n;
   const sel=document.getElementById("rdSura"); if(sel) sel.value=String(n);
   try{ localStorage.setItem(READER_KEY,String(n)); }catch(e){}
   const rows=V.filter(x=>x.s===n);
@@ -1127,6 +1535,7 @@ function renderSura(n){
     if(x.v===0) continue;
     if(x.title) html+=`<div class="rd-section">${esc(x.title)}</div>`;
     const key=x.s+":"+x.v;
+    const bk=(typeof BOOKMARKS!=="undefined" && BOOKMARKS.has(key));
     const arT = (arOn && AR) ? AR[key] : null;
     const tam = (LANG==="Tamil" && TAM) ? TAM[key] : null;
     const useTa = tam && tam.t;
@@ -1134,17 +1543,22 @@ function renderSura(n){
     const taF = (tam && tam.f) ? tam.f : null;
     const footTxt = taF || x.foot;
     if(footTxt) html+=`<div class="rd-foot"><button class="rd-foot-btn" type="button"><span class="cv">▸</span> ${footLabel()}</button><div class="rd-foot-text${taF?' tamil':''}">${esc(footTxt)}</div></div>`;
-    html+=`<div class="rd-actions"><button class="rd-act rd-explain" type="button"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>${explainLabel()}</button><button class="rd-act rd-discuss" type="button"><svg viewBox="0 0 24 24" fill="none"><path d="M4 5h16v11H8l-4 4V5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>${discussLabel()}</button></div>`;
+    html+=`<div class="rd-actions"><button class="rd-act rd-play" type="button"><svg viewBox="0 0 24 24" fill="none"><path d="M7 5l12 7-12 7V5z" fill="currentColor"/></svg>${playLabel()}</button><button class="rd-act rd-words-btn" type="button"><svg viewBox="0 0 24 24" fill="none"><path d="M4 5h7M7 4v1.6M9.5 5c0 3.6-2.3 6.6-5 8M5.5 8.5c0 2 1.9 3.9 4.5 4.9M13 20l4-9 4 9M14.6 16.5h4.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>${wordsLabel()}</button><button class="rd-act rd-explain" type="button"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>${explainLabel()}</button><button class="rd-act rd-discuss" type="button"><svg viewBox="0 0 24 24" fill="none"><path d="M4 5h16v11H8l-4 4V5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>${discussLabel()}</button><span class="rd-actsp"></span><button class="rd-ico rd-bookmark${bk?' on':''}" type="button" aria-label="Bookmark verse"><svg viewBox="0 0 24 24" fill="none"><path d="M6 3h12v18l-6-4-6 4V3z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></button><button class="rd-ico rd-copy" type="button" aria-label="Copy verse"><svg viewBox="0 0 24 24" fill="none"><rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M4 16V5a1 1 0 0 1 1-1h11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button><button class="rd-ico rd-share" type="button" aria-label="Share verse"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v11M12 3l-4 4M12 3l4 4M6 12v6a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>`;
     html+=`</div></div>`;
   }
+  html+=`<div class="rd-credit">${LANG==="Tamil"?"வார்த்தை வாரியான & மூல தரவு":"Word-by-word & root data"}: <a href="https://github.com/WikiSubmission/wikisubmission-api-quran" target="_blank" rel="noopener">WikiSubmission</a> (MIT) · ${LANG==="Tamil"?"ஒலி":"Audio"}: <a href="https://everyayah.com" target="_blank" rel="noopener">everyayah.com</a></div>`;
   const c=document.getElementById("rdVerses"); c.innerHTML=html;
   const rd=document.getElementById("reader"); if(rd) rd.scrollTop=0;
   try{ window.scrollTo(0,0); }catch(e){}
 }
 function syncReaderLang(){
-  const a=document.querySelector("#tabAsk .lbl"), r=document.querySelector("#tabRead .lbl");
+  const a=document.querySelector("#tabAsk .lbl"), r=document.querySelector("#tabRead .lbl"), t=document.querySelector("#tabTools .lbl");
   if(a) a.textContent = LANG==="Tamil"?"கேள்":"Ask";
   if(r) r.textContent = LANG==="Tamil"?"படி":"Read";
+  if(t) t.textContent = LANG==="Tamil"?"கருவிகள்":"Tools";
+  const rb=document.querySelector("#rdRangeBtn .rlbl"); if(rb) rb.textContent = LANG==="Tamil"?"தானாக":"Auto-read";
+  const rp=document.getElementById("rrPlay"); if(rp) rp.textContent = LANG==="Tamil"?"▶ வரம்பை இயக்கு":"▶ Play range";
+  if(typeof toolsBuilt!=="undefined" && toolsBuilt && typeof applyToolLang==="function") applyToolLang();
   updateArabicBtn();
   if(LANG==="Tamil" && rdBuilt && !TAM) loadTamil().then(()=>{ if(rdCur) renderSura(rdCur); });
   if(rdBuilt && rdCur) renderSura(rdCur);   // re-render so verse labels + verse language update
@@ -1324,6 +1738,268 @@ function syncReaderLang(){
   const sealBtn=document.querySelector(".seal");
   if(sealBtn) sealBtn.addEventListener("keydown",function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); toggleHistory(); } });
 })();
+
+/* =========================================================================
+   BAYYINAH COMPANION — bookmarks, copy/share, range auto-read, and Tools
+   (Bookmarks · Prayer times · Qibla · Zakat · Reminders). Client-side only.
+   ========================================================================= */
+function savePref(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+function getPref(k){ try{ const s=localStorage.getItem(k); return s?JSON.parse(s):null; }catch(e){ return null; } }
+let bToastT=null;
+function toast(msg){
+  let t=document.getElementById("bToast");
+  if(!t){ t=document.createElement("div"); t.id="bToast"; t.className="b-toast"; document.body.appendChild(t); }
+  t.textContent=msg; t.classList.add("show");
+  clearTimeout(bToastT); bToastT=setTimeout(()=>t.classList.remove("show"),1800);
+}
+
+/* ---- bookmarks ---- */
+const BK_KEY="bayyinah.bookmarks";
+var BOOKMARKS=(function(){ try{ return new Set(JSON.parse(localStorage.getItem(BK_KEY)||"[]")); }catch(e){ return new Set(); } })();
+function saveBookmarks(){ try{ localStorage.setItem(BK_KEY, JSON.stringify([...BOOKMARKS])); }catch(e){} }
+function toggleBookmark(s,v,btn){
+  const key=s+":"+v;
+  if(BOOKMARKS.has(key)){ BOOKMARKS.delete(key); if(btn) btn.classList.remove("on"); toast(LANG==="Tamil"?"நினைவுக்குறி நீக்கப்பட்டது":"Bookmark removed"); }
+  else { BOOKMARKS.add(key); if(btn) btn.classList.add("on"); toast(LANG==="Tamil"?"நினைவுக்குறி சேமிக்கப்பட்டது ★":"Bookmarked ★"); }
+  saveBookmarks();
+  if(document.body.classList.contains("tooling")) renderBookmarks();
+}
+function renderBookmarks(){
+  const box=document.getElementById("bkList"); if(!box) return;
+  const items=[...BOOKMARKS];
+  if(!items.length){ box.innerHTML=`<div class="bk-empty">${LANG==="Tamil"?"இன்னும் நினைவுக்குறிகள் இல்லை. படிக்கும்போது வசனத்தின் ★ ஐ தட்டவும்.":"No bookmarks yet. Tap the ★ on any verse while reading."}</div>`; return; }
+  items.sort((a,b)=>{ const A=a.split(":").map(Number),B=b.split(":").map(Number); return A[0]-B[0]||A[1]-B[1]; });
+  box.innerHTML=items.map(k=>{ const p=k.split(":").map(Number); const t=verseText(p[0],p[1])||""; return `<div class="bk-item"><button class="bk-go" type="button" data-ref="${k}"><span class="bk-ref">${k}</span><span class="bk-txt${LANG==="Tamil"?' tamil':''}">${esc(t.slice(0,120))}</span></button><button class="bk-del" type="button" data-ref="${k}" aria-label="Remove">&times;</button></div>`; }).join("");
+}
+
+/* ---- copy / share / deep-link ---- */
+function verseText(s,v){ const x=byKey[s+":"+v]; if(!x) return ""; if(LANG==="Tamil" && TAM && TAM[s+":"+v] && TAM[s+":"+v].t) return TAM[s+":"+v].t; return x.text||""; }
+function verseShareText(s,v){ return `"${verseText(s,v)}"\n— Quran ${s}:${v} (Rashad Khalifa translation)`; }
+function verseUrl(s,v){ return location.origin+location.pathname+"#"+s+":"+v; }
+function fallbackCopy(txt,done){ try{ const ta=document.createElement("textarea"); ta.value=txt; ta.style.position="fixed"; ta.style.opacity="0"; document.body.appendChild(ta); ta.focus(); ta.select(); document.execCommand("copy"); ta.remove(); done&&done(); }catch(e){ try{ window.prompt("Copy:",txt); }catch(_){} } }
+function copyVerse(s,v,btn){
+  const txt=verseShareText(s,v)+"\n"+verseUrl(s,v);
+  const done=()=>{ toast(LANG==="Tamil"?"நகலெடுக்கப்பட்டது":"Copied"); if(btn){ btn.classList.add("copied"); setTimeout(()=>btn.classList.remove("copied"),900); } };
+  try{ if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(done).catch(()=>fallbackCopy(txt,done)); } else fallbackCopy(txt,done); }catch(e){ fallbackCopy(txt,done); }
+}
+async function shareVerse(s,v){
+  const text=verseShareText(s,v), url=verseUrl(s,v);
+  if(navigator.share){ try{ await navigator.share({title:"Bayyinah — Quran "+s+":"+v, text, url}); }catch(e){} }
+  else { const t=text+"\n"+url; fallbackCopy(t,()=>toast(LANG==="Tamil"?"பகிர இணைப்பு நகலெடுக்கப்பட்டது":"Link copied to share")); }
+}
+function openHashVerse(){ const m=(location.hash||"").match(/^#(\d+):(\d+)$/); if(m){ const s=+m[1],v=+m[2]; if(byKey[s+":"+v]) navToVerse(s,v); } }
+window.addEventListener("hashchange", openHashVerse);
+
+/* ---- range auto-read wiring ---- */
+const SURA_LEN={};
+V.forEach(x=>{ if(x.v>=1){ if(!SURA_LEN[x.s] || x.v>SURA_LEN[x.s]) SURA_LEN[x.s]=x.v; } });
+function clampVerse(s,v){ v=v|0; if(v<1)v=1; const mx=SURA_LEN[s]||1; return Math.min(v,mx); }
+function initRange(){
+  const btn=document.getElementById("rdRangeBtn"), panel=document.getElementById("rdRange"); if(!btn||!panel) return;
+  const fs=document.getElementById("rrFromS"), ts=document.getElementById("rrToS");
+  const opts=SURA_NAMES.map((nm,i)=>`<option value="${i+1}">${i+1}. ${esc(nm)}</option>`).join("");
+  fs.innerHTML=opts; ts.innerHTML=opts;
+  btn.addEventListener("click",()=>{ panel.hidden=!panel.hidden; btn.classList.toggle("on",!panel.hidden); if(!panel.hidden){ fs.value=String(rdCur||1); ts.value=String(rdCur||1); } });
+  document.getElementById("rrPlay").addEventListener("click",()=>{
+    let a=+fs.value, b=clampVerse(a, +document.getElementById("rrFromV").value);
+    let c=+ts.value, d=clampVerse(c, +document.getElementById("rrToV").value);
+    if(c<a || (c===a && d<b)){ const ta=a, tb=b; a=c; b=d; c=ta; d=tb; }   // normalize to mushaf order
+    const hint=document.getElementById("rrHint");
+    if(!byKey[a+":"+b] || !byKey[c+":"+d]){ hint.textContent=LANG==="Tamil"?"தவறான வரம்பு":"Invalid range"; return; }
+    hint.textContent=`${a}:${b} → ${c}:${d}`;
+    playRange(a,b,c,d);
+  });
+}
+
+/* ---- astronomy helpers (prayer times, PrayTimes-style single pass) ---- */
+const D2R=Math.PI/180;
+function dsin(d){return Math.sin(d*D2R)} function dcos(d){return Math.cos(d*D2R)} function dtan(d){return Math.tan(d*D2R)}
+function dasin(x){return Math.asin(x)/D2R} function dacos(x){return Math.acos(x)/D2R}
+function datan2(y,x){return Math.atan2(y,x)/D2R} function dacot(x){return Math.atan2(1,x)/D2R}
+function fixh(a){a=a-24*Math.floor(a/24);return a} function fixa(a){a=a-360*Math.floor(a/360);return a}
+function jDate(y,m,d){ if(m<=2){y--;m+=12;} const A=Math.floor(y/100), B=2-A+Math.floor(A/4); return Math.floor(365.25*(y+4716))+Math.floor(30.6001*(m+1))+d+B-1524.5; }
+function sunPos(jd){ const D=jd-2451545.0; const g=fixa(357.529+0.98560028*D), q=fixa(280.459+0.98564736*D);
+  const L=fixa(q+1.915*dsin(g)+0.020*dsin(2*g)); const e=23.439-0.00000036*D;
+  const dec=dasin(dsin(e)*dsin(L)); const RA=datan2(dcos(e)*dsin(L),dcos(L))/15; const eqt=q/15-fixh(RA); return [dec,eqt]; }
+function midDay(jd,t){ return fixh(12-sunPos(jd+t)[1]); }
+function sunAngle(jd,t,ang,lat,ccw){ const dec=sunPos(jd+t)[0];
+  const v=(1/15)*dacos((-dsin(ang)-dsin(dec)*dsin(lat))/(dcos(dec)*dcos(lat))); return midDay(jd,t)+(ccw?-v:v); }
+function asrTime(jd,t,factor,lat){ const dec=sunPos(jd+t)[0]; const ang=-dacot(factor+dtan(Math.abs(lat-dec))); return sunAngle(jd,t,ang,lat,false); }
+function prayTimes(date,lat,lng,tz,fajrAng,ishaAng,asrF,ishaMin){
+  const jd=jDate(date.getFullYear(),date.getMonth()+1,date.getDate())-lng/(15*24);
+  let fajr=sunAngle(jd,5/24,fajrAng,lat,true);
+  let sunrise=sunAngle(jd,6/24,0.833,lat,true);
+  let dhuhr=midDay(jd,12/24);
+  let asr=asrTime(jd,13/24,asrF,lat);
+  let maghrib=sunAngle(jd,18/24,0.833,lat,false);
+  let isha= ishaMin ? maghrib+ishaMin/60 : sunAngle(jd,18/24,ishaAng,lat,false);
+  const adj=tz-lng/15; const out={fajr,sunrise,dhuhr,asr,maghrib,isha};
+  for(const k in out) out[k]=fixh(out[k]+adj);
+  return out;
+}
+function fmtTime(h){ if(!isFinite(h)) return "—"; h=fixh(h); let hh=Math.floor(h), mm=Math.round((h-hh)*60); if(mm===60){mm=0;hh=(hh+1)%24;} const ap=hh<12?"AM":"PM"; let h12=hh%12; if(h12===0)h12=12; return h12+":"+(mm<10?"0":"")+mm+" "+ap; }
+
+/* ---- prayer times ---- */
+const PRAYER_METHODS=[
+  {name:"Muslim World League", fajr:18, isha:17},
+  {name:"ISNA (N. America)", fajr:15, isha:15},
+  {name:"Umm al-Qura (Makkah)", fajr:18.5, ishaMin:90},
+  {name:"Egyptian Authority", fajr:19.5, isha:17.5},
+  {name:"Karachi", fajr:18, isha:18}
+];
+let PT_METHOD=+(getPref("bayyinah.pt.method")||0)||0, PT_LOC=getPref("bayyinah.pt.loc"), PT_TODAY=null;
+function locatePrayer(){
+  const btn=document.getElementById("ptLocate"), res=document.getElementById("ptResult");
+  if(!navigator.geolocation){ res.innerHTML=`<div class="pt-err">${LANG==="Tamil"?"இந்த சாதனத்தில் இடம் கிடைக்கவில்லை.":"Location isn't available on this device."}</div>`; return; }
+  const lbl=btn.textContent; btn.disabled=true; btn.textContent=LANG==="Tamil"?"இடம் பெறுகிறது…":"Locating…";
+  navigator.geolocation.getCurrentPosition(pos=>{
+    btn.disabled=false; btn.textContent=lbl;
+    const loc={lat:pos.coords.latitude, lng:pos.coords.longitude}; PT_LOC=loc; savePref("bayyinah.pt.loc",loc); showPrayerTimes(loc);
+  }, err=>{
+    btn.disabled=false; btn.textContent=lbl;
+    res.innerHTML=`<div class="pt-err">${LANG==="Tamil"?"இட அனுமதி மறுக்கப்பட்டது.":"Location permission was denied."}</div>`;
+  }, {enableHighAccuracy:false, timeout:10000, maximumAge:600000});
+}
+function showPrayerTimes(loc){
+  const res=document.getElementById("ptResult"); if(!res||!loc) return;
+  const now=new Date(), tz=-now.getTimezoneOffset()/60, m=PRAYER_METHODS[PT_METHOD];
+  const t=prayTimes(now, loc.lat, loc.lng, tz, m.fajr, (m.isha!=null?m.isha:18), 1, m.ishaMin);
+  PT_TODAY=t;
+  const order=[["fajr","Fajr","ஃபஜ்ர்"],["sunrise","Sunrise","சூரிய உதயம்"],["dhuhr","Dhuhr","லுஹர்"],["asr","Asr","அஸர்"],["maghrib","Maghrib","மஃக்ரிப்"],["isha","Isha","இஷா"]];
+  const nowH=now.getHours()+now.getMinutes()/60; let nextKey=null;
+  for(const o of order){ if(o[0]!=="sunrise" && t[o[0]]>nowH){ nextKey=o[0]; break; } }
+  const rows=order.map(o=>`<div class="pt-row${o[0]===nextKey?' next':''}"><span class="pt-name">${LANG==="Tamil"?o[2]:o[1]}</span><span class="pt-time">${fmtTime(t[o[0]])}</span></div>`).join("");
+  res.innerHTML=rows+`<div class="pt-loc">${loc.lat.toFixed(2)}, ${loc.lng.toFixed(2)} · ${m.name}</div>`;
+  scheduleReminders();
+}
+
+/* ---- qibla ---- */
+function qiblaBearing(lat,lng){ const kLat=21.4225,kLng=39.8262; const dL=(kLng-lng)*D2R, la1=lat*D2R, la2=kLat*D2R;
+  const y=Math.sin(dL), x=Math.cos(la1)*Math.tan(la2)-Math.sin(la1)*Math.cos(dL); return (Math.atan2(y,x)/D2R+360)%360; }
+let qiblaDeg=null, qiblaOn=false;
+function setNeedle(rot){ const nd=document.getElementById("qbNeedle"); if(nd) nd.style.transform=`translateX(-50%) rotate(${rot}deg)`; }
+function startQibla(){
+  const note=document.getElementById("qbNote"), br=document.getElementById("qbBearing");
+  if(!navigator.geolocation){ note.textContent=LANG==="Tamil"?"இடம் கிடைக்கவில்லை.":"Location isn't available."; return; }
+  note.textContent=LANG==="Tamil"?"இடம் பெறுகிறது…":"Getting your location…";
+  navigator.geolocation.getCurrentPosition(pos=>{
+    qiblaDeg=qiblaBearing(pos.coords.latitude,pos.coords.longitude);
+    br.textContent=Math.round(qiblaDeg)+"°";
+    setNeedle(qiblaDeg);   // fallback: relative to north (map-up)
+    note.textContent=LANG==="Tamil"?"தொலைபேசியை நகர்த்துங்கள் — ஊசி கிப்லாவைக் காட்டும்.":"Hold your phone flat and turn — the needle points to the Kaaba.";
+    enableCompass();
+  }, err=>{ note.textContent=LANG==="Tamil"?"இட அனுமதி மறுக்கப்பட்டது.":"Location permission was denied."; }, {enableHighAccuracy:true, timeout:10000});
+}
+function enableCompass(){
+  if(qiblaOn) return; qiblaOn=true;
+  function handler(e){
+    let heading = (e.webkitCompassHeading!=null) ? e.webkitCompassHeading : (e.alpha!=null ? 360-e.alpha : null);
+    if(heading==null || qiblaDeg==null) return;
+    setNeedle(qiblaDeg-heading);
+  }
+  if(typeof DeviceOrientationEvent!=="undefined" && typeof DeviceOrientationEvent.requestPermission==="function"){
+    DeviceOrientationEvent.requestPermission().then(p=>{ if(p==="granted") window.addEventListener("deviceorientation",handler,true); else document.getElementById("qbNote").textContent=LANG==="Tamil"?"திசைகாட்டி அனுமதி தேவை — வடக்கை அடிப்படையாகக் காட்டுகிறது.":"Compass permission needed — showing bearing from North."; }).catch(()=>{});
+  } else if("ondeviceorientationabsolute" in window){ window.addEventListener("deviceorientationabsolute",handler,true); }
+  else { window.addEventListener("deviceorientation",handler,true); }
+}
+
+/* ---- zakat ---- */
+function znum(id){ const el=document.getElementById(id); const v=parseFloat(el&&el.value); return isFinite(v)&&v>0?v:0; }
+function calcZakat(){
+  const res=document.getElementById("zkResult"); if(!res) return;
+  const income=znum("zkIncome"); const zak=income*0.025;
+  if(income<=0){ res.innerHTML=""; return; }
+  const fmt=n=>n.toLocaleString(undefined,{maximumFractionDigits:2});
+  res.innerHTML=`<div class="zk-due"><span>${LANG==="Tamil"?"ஜகாத் (2.5%)":"Zakat (2.5%)"}</span><b>${fmt(zak)}</b></div>`;
+}
+
+/* ---- reminders + zikr ---- */
+const ZIKR=[
+  {en:"By remembering God, the hearts rejoice. (13:28)", ta:"கடவுளை நினைவுகூர்வதால் இதயங்கள் அமைதி பெறும். (13:28)"},
+  {en:"You shall remember Me, that I may remember you. (2:152)", ta:"என்னை நினைவுகூருங்கள்; நான் உங்களை நினைவுகூர்வேன். (2:152)"},
+  {en:"O you who believe, you shall remember God frequently. (33:41)", ta:"விசுவாசிகளே, கடவுளை அதிகமாக நினைவுகூருங்கள். (33:41)"},
+  {en:"Remembering God is the most important objective. (29:45)", ta:"கடவுளை நினைவுகூர்வதே மிக முக்கியமான நோக்கம். (29:45)"},
+  {en:"They remember God while standing, sitting, and lying down. (3:191)", ta:"நின்று, அமர்ந்து, படுத்திருக்கும்போதும் அவர்கள் கடவுளை நினைவுகூர்கின்றனர். (3:191)"},
+  {en:"Glory be to God — Praise be to God — There is no god but God.", ta:"கடவுள் தூயவன் — புகழ் கடவுளுக்கே — கடவுளைத் தவிர வேறு இறைவன் இல்லை."},
+  {en:"Do not let wealth or children distract you from remembering God. (63:9)", ta:"செல்வமோ பிள்ளைகளோ கடவுளை நினைவுகூர்வதிலிருந்து உங்களைத் திசைதிருப்ப விடாதீர்கள். (63:9)"}
+];
+function pickZikr(){ return ZIKR[Math.floor(Math.random()*ZIKR.length)]; }
+function showZikrNow(){ const box=document.getElementById("zikrNow"); if(!box) return; const z=pickZikr(); box.innerHTML=`<div class="zk-quote${LANG==="Tamil"?' tamil':''}">${esc(LANG==="Tamil"?z.ta:z.en)}</div>`; }
+const REM_KEY="bayyinah.reminders"; let REM={zikr:false,fajr:false,magh:false};
+try{ REM=Object.assign(REM, JSON.parse(localStorage.getItem(REM_KEY)||"{}")); }catch(e){}
+let remTimers=[], zikrInterval=null;
+function saveRem(){ try{ localStorage.setItem(REM_KEY, JSON.stringify(REM)); }catch(e){} }
+function notify(title, body){ try{ if("Notification" in window && Notification.permission==="granted") new Notification(title,{body:body||"",icon:"/icons/icon-192.png",badge:"/icons/icon-192.png"}); }catch(e){} }
+function wireReminders(){
+  const z=document.getElementById("remZikr"), f=document.getElementById("remFajr"), m=document.getElementById("remMagh");
+  if(z){ z.checked=!!REM.zikr; z.addEventListener("change",()=>{ REM.zikr=z.checked; saveRem(); scheduleReminders(); updateRemNote(); }); }
+  if(f){ f.checked=!!REM.fajr; f.addEventListener("change",()=>{ REM.fajr=f.checked; saveRem(); scheduleReminders(); updateRemNote(); }); }
+  if(m){ m.checked=!!REM.magh; m.addEventListener("change",()=>{ REM.magh=m.checked; saveRem(); scheduleReminders(); updateRemNote(); }); }
+  const en=document.getElementById("remEnable"); if(en) en.addEventListener("click", enableNotifs);
+  updateRemNote();
+}
+function enableNotifs(){
+  if(!("Notification" in window)){ updateRemNote(); return; }
+  Notification.requestPermission().then(()=>{ updateRemNote(); if(Notification.permission==="granted"){ notify("Bayyinah", LANG==="Tamil"?"நினைவூட்டல்கள் இயக்கப்பட்டன.":"Reminders enabled."); scheduleReminders(); } });
+}
+function scheduleReminders(){
+  remTimers.forEach(clearTimeout); remTimers=[];
+  if(zikrInterval){ clearInterval(zikrInterval); zikrInterval=null; }
+  if(!("Notification" in window) || Notification.permission!=="granted") return;
+  const now=new Date(), nowMs=now.getTime();
+  function at(hf, fn){ if(hf==null||!isFinite(hf)) return; const d=new Date(now); d.setHours(Math.floor(hf), Math.round((hf%1)*60), 0, 0); const ms=d.getTime()-nowMs; if(ms>0 && ms<24*3600*1000) remTimers.push(setTimeout(fn,ms)); }
+  if(REM.fajr && PT_TODAY) at(PT_TODAY.fajr, ()=>notify(LANG==="Tamil"?"ஃபஜ்ர்":"Fajr", LANG==="Tamil"?"குர்ஆன் படிக்க நேரம்.":"Time to read the Quran."));
+  if(REM.magh && PT_TODAY) at(PT_TODAY.maghrib, ()=>notify(LANG==="Tamil"?"மஃக்ரிப்":"Maghrib", LANG==="Tamil"?"குர்ஆன் படிக்க நேரம்.":"Time to read the Quran."));
+  if(REM.zikr){ zikrInterval=setInterval(()=>{ const z=pickZikr(); notify(LANG==="Tamil"?"திக்ர்":"Zikr", LANG==="Tamil"?z.ta:z.en); }, 3*3600*1000); }
+}
+function updateRemNote(){
+  const el=document.getElementById("remNote"); if(!el) return;
+  const perm=("Notification" in window)?Notification.permission:"unsupported"; const ta=LANG==="Tamil";
+  let s;
+  if(perm==="granted") s=ta?"அறிவிப்புகள் இயக்கப்பட்டுள்ளன. பாய்யினா திறந்திருக்கும்போது நினைவூட்டல்கள் வரும்.":"Notifications are on. Reminders fire while Bayyinah is open.";
+  else if(perm==="denied") s=ta?"அறிவிப்புகள் தடுக்கப்பட்டுள்ளன — உலாவி அமைப்புகளில் அனுமதிக்கவும்.":"Notifications are blocked — allow them in your browser settings.";
+  else if(perm==="unsupported") s=ta?"இந்த உலாவியில் அறிவிப்புகள் ஆதரிக்கப்படவில்லை.":"Notifications aren't supported in this browser.";
+  else s=ta?"நினைவூட்டல்களைப் பெற ‘அறிவிப்புகளை இயக்கு’ ஐ தட்டவும்.":"Tap ‘Enable notifications’ to receive reminders.";
+  if((REM.fajr||REM.magh) && !PT_TODAY) s+=" "+(ta?"ஃபஜ்ர்/மஃக்ரிப் நேரத்திற்கு ‘தொழுகை நேரங்களில்’ இடத்தை அமைக்கவும்.":"Set your location under Prayer times to schedule Fajr/Maghrib.");
+  s+=" "+(ta?"(மூடிய நிலையில் நினைவூட்டல்கள் விரைவில்.)":"(Reminders for when the app is closed are coming soon.)");
+  el.textContent=s;
+}
+
+/* ---- tool labels (bilingual) ---- */
+const TOOLLBL={
+  toolsTitle:["Your Quran companion","உங்கள் குர்ஆன் துணை"],
+  toolsSub:["Bookmarks, prayer times, Qibla direction, Zakat, and gentle reminders — all in one place.","நினைவுக்குறிகள், தொழுகை நேரங்கள், கிப்லா, ஜகாத் மற்றும் நினைவூட்டல்கள் — அனைத்தும் ஒரே இடத்தில்."],
+  tlBookmarks:["Bookmarks","நினைவுக்குறிகள்"], tlPrayer:["Prayer times","தொழுகை நேரங்கள்"],
+  tlQibla:["Qibla finder","கிப்லா திசை"], tlZakat:["Zakat calculator","ஜகாத் கணிப்பான்"], tlRemind:["Reminders","நினைவூட்டல்கள்"],
+  ptLocate:["Use my location","என் இடத்தைப் பயன்படுத்து"], qbStart:["Point me to the Qibla","கிப்லாவைக் காட்டு"], remEnable:["Enable notifications","அறிவிப்புகளை இயக்கு"],
+  zkIncomeL:["Your income","உங்கள் வருமானம்"], zkNote:["Zakat is a fixed 2.5% of your income, given to charity the day you receive it (6:141).","ஜகாத் என்பது உங்கள் வருமானத்தில் நிலையான 2.5% — பெறும் நாளிலேயே தானமாக வழங்கப்படுகிறது (6:141)."],
+  remZikrL:["Zikr nudge — a gentle reminder to remember God through the day","திக்ர் — நாள் முழுவதும் கடவுளை நினைவுகூர மென்மையான நினைவூட்டல்"],
+  remFajrL:["Read the Quran at Fajr","ஃபஜ்ரில் குர்ஆன் படியுங்கள்"], remMaghL:["Read the Quran at Maghrib","மஃக்ரிபில் குர்ஆன் படியுங்கள்"]
+};
+function applyToolLang(){ const i=LANG==="Tamil"?1:0; for(const id in TOOLLBL){ const el=document.getElementById(id); if(el) el.textContent=TOOLLBL[id][i]; } showZikrNow(); renderBookmarks(); if(PT_LOC) showPrayerTimes(PT_LOC); updateRemNote(); }
+
+/* ---- build tools (once) ---- */
+var toolsBuilt=false;
+function buildTools(){
+  if(toolsBuilt) return; toolsBuilt=true;
+  const pm=document.getElementById("ptMethod");
+  if(pm){ pm.innerHTML=PRAYER_METHODS.map((m,i)=>`<option value="${i}">${esc(m.name)}</option>`).join(""); pm.value=String(PT_METHOD);
+    pm.addEventListener("change",()=>{ PT_METHOD=+pm.value; savePref("bayyinah.pt.method",PT_METHOD); if(PT_LOC) showPrayerTimes(PT_LOC); }); }
+  const pl=document.getElementById("ptLocate"); if(pl) pl.addEventListener("click", locatePrayer);
+  const qs=document.getElementById("qbStart"); if(qs) qs.addEventListener("click", startQibla);
+  const zi=document.getElementById("zkIncome"); if(zi) zi.addEventListener("input", calcZakat);
+  const bl=document.getElementById("bkList");
+  if(bl) bl.addEventListener("click",(e)=>{
+    const go=e.target.closest(".bk-go"); if(go){ const p=go.getAttribute("data-ref").split(":").map(Number); navToVerse(p[0],p[1]); return; }
+    const del=e.target.closest(".bk-del"); if(del){ BOOKMARKS.delete(del.getAttribute("data-ref")); saveBookmarks(); renderBookmarks(); return; }
+  });
+  wireReminders(); showZikrNow(); applyToolLang();
+  if(PT_LOC) showPrayerTimes(PT_LOC);
+}
+
+/* ---- boot ---- */
+initRange();
+setTimeout(openHashVerse, 0);
 </script>
 
 <!-- PWA: service worker + install prompt / in-app-browser guidance -->
