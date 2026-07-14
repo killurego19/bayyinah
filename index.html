@@ -588,17 +588,30 @@ body.cc-open{overflow:hidden}
 .pt-err{color:#e0a; color:#dd9; font-size:13.5px;text-align:center;padding:6px}
 
 /* qibla */
-.qb-wrap{display:flex;gap:16px;align-items:center;flex-wrap:wrap;justify-content:center;margin-bottom:14px}
-.qb-dial{position:relative;width:170px;height:170px;flex:0 0 170px;border-radius:50%;border:2px solid var(--line);
-  background:radial-gradient(circle at 50% 42%,rgba(79,174,135,.1),transparent 68%)}
-.qb-n{position:absolute;top:5px;left:50%;transform:translateX(-50%);font-size:12px;color:var(--muted);font-weight:600}
-.qb-needle{position:absolute;left:50%;bottom:50%;width:0;height:0;transform-origin:bottom center;
-  transform:translateX(-50%) rotate(0deg);transition:transform .18s ease-out;
-  border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:72px solid var(--gold)}
-.qb-kaaba{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:16px;opacity:.8}
-.qb-info{text-align:center;min-width:120px}
-.qb-bearing{font-family:"Cormorant Garamond",serif;font-size:30px;color:var(--gold-soft)}
-.qb-note{color:var(--muted);font-size:12.5px;line-height:1.5;margin-top:4px}
+.qb-stage{position:relative;width:206px;height:206px;margin:4px auto 2px}
+.qb-face{position:absolute;top:-4px;left:50%;transform:translateX(-50%);z-index:3;
+  border-left:9px solid transparent;border-right:9px solid transparent;border-top:13px solid var(--emerald)}
+.qb-dial{position:absolute;inset:0;border-radius:50%;border:2px solid var(--line);
+  background:radial-gradient(circle at 50% 45%,rgba(79,174,135,.09),transparent 70%);
+  box-shadow:inset 0 0 32px -12px rgba(0,0,0,.6);transition:border-color .2s,box-shadow .2s}
+.qb-dial.aligned{border-color:var(--emerald);box-shadow:0 0 0 3px rgba(79,174,135,.25),inset 0 0 32px -12px rgba(0,0,0,.6)}
+.qb-arrow{position:absolute;left:50%;bottom:50%;width:6px;height:84px;transform-origin:bottom center;
+  transform:translateX(-50%) rotate(0deg);transition:transform .16s ease-out;border-radius:3px;
+  background:linear-gradient(to top,rgba(201,162,75,.35),var(--gold-soft))}
+.qb-arrow::before{content:"";position:absolute;top:-9px;left:50%;transform:translateX(-50%);
+  border-left:10px solid transparent;border-right:10px solid transparent;border-bottom:13px solid var(--gold-soft)}
+.qb-dial.aligned .qb-arrow{background:linear-gradient(to top,rgba(79,174,135,.35),var(--emerald))}
+.qb-dial.aligned .qb-arrow::before{border-bottom-color:var(--emerald)}
+.qb-kaaba{position:absolute;top:-32px;left:50%;transform:translateX(-50%);font-size:18px}
+.qb-hub{position:absolute;left:50%;top:50%;width:13px;height:13px;transform:translate(-50%,-50%);border-radius:50%;
+  background:var(--gold);border:2px solid var(--panel);z-index:2}
+.qb-dial.aligned .qb-hub{background:var(--emerald)}
+.qb-status{text-align:center;font-size:14px;color:var(--parch-dim);min-height:20px;margin-top:4px}
+.qb-status.ok{color:var(--emerald);font-weight:600}
+.qb-readout{text-align:center;margin-top:5px;display:flex;gap:9px;justify-content:center;align-items:baseline;flex-wrap:wrap}
+.qb-bearing{font-family:"Cormorant Garamond",serif;font-size:26px;color:var(--gold-soft)}
+.qb-dist{color:var(--muted);font-size:13px}
+.qb-note{color:var(--muted);font-size:12.5px;line-height:1.55;text-align:center;margin:9px 0 13px}
 
 /* zakat */
 .zk-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -822,15 +835,16 @@ body.cc-open{overflow:hidden}
       <section class="tcard" id="tcQibla">
         <div class="tc-head"><span class="tc-ic">🧭</span><h3 id="tlQibla">Qibla finder</h3></div>
         <div class="tc-body">
-          <div class="qb-wrap">
+          <div class="qb-stage">
+            <div class="qb-face" aria-hidden="true"></div>
             <div class="qb-dial" id="qbDial">
-              <div class="qb-ticks"></div>
-              <div class="qb-needle" id="qbNeedle"><span class="qb-tip"></span></div>
-              <div class="qb-kaaba" id="qbKaaba">🕋</div>
-              <div class="qb-n">N</div>
+              <div class="qb-arrow" id="qbNeedle"><span class="qb-kaaba">🕋</span></div>
+              <div class="qb-hub"></div>
             </div>
-            <div class="qb-info"><div id="qbBearing" class="qb-bearing">—°</div><div id="qbNote" class="qb-note">Tap below and allow location + motion to find the direction of the Kaaba.</div></div>
           </div>
+          <div id="qbStatus" class="qb-status"></div>
+          <div class="qb-readout"><span class="qb-bearing" id="qbBearing">—</span><span class="qb-dist" id="qbDist"></span></div>
+          <p id="qbNote" class="qb-note">Tap below and allow location. On a phone, also allow motion, then turn until the gold arrow points up to the ▼ mark — that is the direction of the Kaaba.</p>
           <button id="qbStart" class="t-btn primary" type="button">Point me to the Qibla</button>
         </div>
       </section>
@@ -1876,31 +1890,41 @@ function showPrayerTimes(loc){
 /* ---- qibla ---- */
 function qiblaBearing(lat,lng){ const kLat=21.4225,kLng=39.8262; const dL=(kLng-lng)*D2R, la1=lat*D2R, la2=kLat*D2R;
   const y=Math.sin(dL), x=Math.cos(la1)*Math.tan(la2)-Math.sin(la1)*Math.cos(dL); return (Math.atan2(y,x)/D2R+360)%360; }
-let qiblaDeg=null, qiblaOn=false;
+function qiblaDist(lat,lng){ const R=6371,r=Math.PI/180,kLat=21.4225,kLng=39.8262; const dLa=(kLat-lat)*r,dLo=(kLng-lng)*r; const a=Math.sin(dLa/2)**2+Math.cos(lat*r)*Math.cos(kLat*r)*Math.sin(dLo/2)**2; return 2*R*Math.asin(Math.min(1,Math.sqrt(a))); }
+function compassName(b){ const en=["N","NE","E","SE","S","SW","W","NW"], ta=["வடக்கு","வடகிழக்கு","கிழக்கு","தென்கிழக்கு","தெற்கு","தென்மேற்கு","மேற்கு","வடமேற்கு"]; const i=Math.round((((b%360)+360)%360)/45)%8; return (LANG==="Tamil"?ta:en)[i]; }
+let qiblaDeg=null, qiblaOn=false, lastHeading=null;
 function setNeedle(rot){ const nd=document.getElementById("qbNeedle"); if(nd) nd.style.transform=`translateX(-50%) rotate(${rot}deg)`; }
+function qiblaUpdate(heading){
+  if(qiblaDeg==null) return;
+  const rot=(heading==null)?qiblaDeg:(qiblaDeg-heading);
+  setNeedle(rot);
+  const dial=document.getElementById("qbDial"), status=document.getElementById("qbStatus"); const ta=LANG==="Tamil";
+  if(heading==null){ if(dial) dial.classList.remove("aligned"); if(status){ status.classList.remove("ok"); status.textContent=ta?"வடக்கை மேலே வைத்தால் தங்க ஊசி கிப்லாவைக் காட்டும். நேரடியாகத் திரும்ப மொபைலில் திறக்கவும்.":"With North up, the gold arrow shows the Qibla. Open on a phone to turn and align live."; } return; }
+  let d=(((rot%360)+540)%360)-180; const aligned=Math.abs(d)<=8;
+  if(dial) dial.classList.toggle("aligned",aligned);
+  if(status){ status.classList.toggle("ok",aligned); status.textContent = aligned ? (ta?"✓ நீங்கள் கிப்லாவை நோக்கியுள்ளீர்கள்":"✓ You are facing the Qibla") : (ta?"ஊசி ▼ மேலே காட்டும் வரை திரும்புங்கள்":"Turn until the arrow points up to the ▼ mark"); }
+}
 function startQibla(){
-  const note=document.getElementById("qbNote"), br=document.getElementById("qbBearing");
-  if(!navigator.geolocation){ note.textContent=LANG==="Tamil"?"இடம் கிடைக்கவில்லை.":"Location isn't available."; return; }
-  note.textContent=LANG==="Tamil"?"இடம் பெறுகிறது…":"Getting your location…";
+  enableCompass();   // request motion permission inside the click gesture (required on iOS)
+  const note=document.getElementById("qbNote"), br=document.getElementById("qbBearing"), dist=document.getElementById("qbDist"), status=document.getElementById("qbStatus"); const ta=LANG==="Tamil";
+  if(!navigator.geolocation){ if(note) note.textContent=ta?"இந்த சாதனத்தில் இடம் கிடைக்கவில்லை.":"Location isn't available on this device."; return; }
+  if(status) status.textContent=ta?"இடம் பெறுகிறது…":"Getting your location…";
   navigator.geolocation.getCurrentPosition(pos=>{
-    qiblaDeg=qiblaBearing(pos.coords.latitude,pos.coords.longitude);
-    br.textContent=Math.round(qiblaDeg)+"°";
-    setNeedle(qiblaDeg);   // fallback: relative to north (map-up)
-    note.textContent=LANG==="Tamil"?"தொலைபேசியை நகர்த்துங்கள் — ஊசி கிப்லாவைக் காட்டும்.":"Hold your phone flat and turn — the needle points to the Kaaba.";
-    enableCompass();
-  }, err=>{ note.textContent=LANG==="Tamil"?"இட அனுமதி மறுக்கப்பட்டது.":"Location permission was denied."; }, {enableHighAccuracy:true, timeout:10000});
+    const lat=pos.coords.latitude, lng=pos.coords.longitude;
+    qiblaDeg=qiblaBearing(lat,lng);
+    if(br) br.textContent=Math.round(qiblaDeg)+"° · "+compassName(qiblaDeg);
+    if(dist) dist.textContent="· "+Math.round(qiblaDist(lat,lng)).toLocaleString()+" km";
+    if(note) note.textContent=ta?"தொலைபேசியை தட்டையாகப் பிடித்து, தங்க ஊசி ▼ மேலே காட்டும் வரை மெதுவாகத் திரும்புங்கள் — அப்போது நீங்கள் கஅபாவை நோக்கியிருப்பீர்கள்.":"Hold your phone flat and turn slowly until the gold arrow points up to the ▼ mark — then you are facing the Kaaba.";
+    qiblaUpdate(lastHeading);
+  }, err=>{ if(status) status.textContent=""; if(note) note.textContent=ta?"இட அனுமதி மறுக்கப்பட்டது — அனுமதித்து மீண்டும் முயற்சிக்கவும்.":"Location permission was denied — please allow it and try again."; }, {enableHighAccuracy:true, timeout:12000, maximumAge:600000});
 }
 function enableCompass(){
   if(qiblaOn) return; qiblaOn=true;
-  function handler(e){
-    let heading = (e.webkitCompassHeading!=null) ? e.webkitCompassHeading : (e.alpha!=null ? 360-e.alpha : null);
-    if(heading==null || qiblaDeg==null) return;
-    setNeedle(qiblaDeg-heading);
-  }
+  function handler(e){ let h=(e.webkitCompassHeading!=null)?e.webkitCompassHeading:(e.alpha!=null?(360-e.alpha):null); if(h==null) return; lastHeading=h; qiblaUpdate(h); }
   if(typeof DeviceOrientationEvent!=="undefined" && typeof DeviceOrientationEvent.requestPermission==="function"){
-    DeviceOrientationEvent.requestPermission().then(p=>{ if(p==="granted") window.addEventListener("deviceorientation",handler,true); else document.getElementById("qbNote").textContent=LANG==="Tamil"?"திசைகாட்டி அனுமதி தேவை — வடக்கை அடிப்படையாகக் காட்டுகிறது.":"Compass permission needed — showing bearing from North."; }).catch(()=>{});
+    DeviceOrientationEvent.requestPermission().then(p=>{ if(p==="granted") window.addEventListener("deviceorientation",handler,true); }).catch(()=>{});
   } else if("ondeviceorientationabsolute" in window){ window.addEventListener("deviceorientationabsolute",handler,true); }
-  else { window.addEventListener("deviceorientation",handler,true); }
+  else if(typeof DeviceOrientationEvent!=="undefined"){ window.addEventListener("deviceorientation",handler,true); }
 }
 
 /* ---- zakat ---- */
@@ -1973,6 +1997,7 @@ const TOOLLBL={
   tlQibla:["Qibla finder","கிப்லா திசை"], tlZakat:["Zakat calculator","ஜகாத் கணிப்பான்"], tlRemind:["Reminders","நினைவூட்டல்கள்"],
   ptLocate:["Use my location","என் இடத்தைப் பயன்படுத்து"], qbStart:["Point me to the Qibla","கிப்லாவைக் காட்டு"], remEnable:["Enable notifications","அறிவிப்புகளை இயக்கு"],
   zkIncomeL:["Your income","உங்கள் வருமானம்"], zkNote:["Zakat is a fixed 2.5% of your income, given to charity the day you receive it (6:141).","ஜகாத் என்பது உங்கள் வருமானத்தில் நிலையான 2.5% — பெறும் நாளிலேயே தானமாக வழங்கப்படுகிறது (6:141)."],
+  qbNote:["Tap below and allow location. On a phone, also allow motion, then turn until the gold arrow points up to the ▼ mark — that is the direction of the Kaaba.","கீழே தட்டி இட அனுமதி தாருங்கள். மொபைலில் அசைவையும் அனுமதித்து, தங்க ஊசி ▼ மேலே காட்டும் வரை திரும்புங்கள் — அதுவே கஅபாவின் திசை."],
   remZikrL:["Zikr nudge — a gentle reminder to remember God through the day","திக்ர் — நாள் முழுவதும் கடவுளை நினைவுகூர மென்மையான நினைவூட்டல்"],
   remFajrL:["Read the Quran at Fajr","ஃபஜ்ரில் குர்ஆன் படியுங்கள்"], remMaghL:["Read the Quran at Maghrib","மஃக்ரிபில் குர்ஆன் படியுங்கள்"]
 };
