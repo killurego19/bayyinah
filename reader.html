@@ -835,6 +835,23 @@
             })}</>;
         }
 
+
+        // linkify Quran refs in documents — but not Bible refs (Malachi 3:1 etc.)
+        function DocText({ text, onRef }) {
+            const parts = String(text || '').split(/(\b\d{1,3}:\d{1,3}\b)/g);
+            return <>{parts.map((part, i) => {
+                const m = part.match(/^(\d{1,3}):(\d{1,3})$/);
+                if (m && onRef) {
+                    const prev = parts.slice(0, i).join('');
+                    const biblical = /(Deuteronomy|Malachi|Matthew|Luke|Mark|John|Genesis|Veda)[\s(]*$/i.test(prev);
+                    const s = Number(m[1]), a = Number(m[2]);
+                    if (!biblical && s >= 1 && s <= 114 && a >= 0 && a <= VERSE_COUNTS[s - 1]) {
+                        return <span key={i} className="ref-link" title={'Open verse ' + part} onClick={() => onRef(s, a)}>{part}</span>;
+                    }
+                }
+                return <React.Fragment key={i}>{part}</React.Fragment>;
+            })}</>;
+        }
         // ─── grounding retrieval (ported from the Bayyinah main app) ──────
         const tokenizeQ = q => String(q).toLowerCase().replace(/[^\p{L}\p{N}\s:]/gu, ' ').split(/\s+/).filter(w => w.length > 2);
 
@@ -1999,6 +2016,24 @@
                 }, wbwCache[s] ? 250 : 800);
             }, []);
 
+
+            const [docId, setDocId] = useState(null);
+            const [docData, setDocData] = useState(null);
+            const [docLoading, setDocLoading] = useState(false);
+            const openDoc = async (id) => {
+                setDocId(id); setDocData(null); setDocLoading(true);
+                setSearchResults(null); setWordSel(null);
+                setView('doc');
+                window.scrollTo({ top: 0 });
+                if (window.innerWidth < 1024) setSidebarOpen(false);
+                try {
+                    if (!window.__docCache) window.__docCache = {};
+                    if (!window.__docCache[id]) window.__docCache[id] = await (await fetch('docs/' + id + '.json')).json();
+                    setDocData(window.__docCache[id]);
+                } catch (e) {}
+                setDocLoading(false);
+            };
+
             const openSurah = s => {
                 stopAudio();
                 setSearchResults(null); setQuery('');
@@ -2192,12 +2227,12 @@
                             <button className="side-link" onClick={() => setShowBookmarks(true)}>
                                 <Icon d={I.bookmark} size={16} /> Bookmarks <span className="ml-auto" style={{ color: 'var(--muted)' }}><Icon d={I.right} size={14} /></span>
                             </button>
-                            <a className="side-link" href="https://www.wikisubmission.org/proclamation" target="_blank" rel="noopener">
-                                <Icon d={I.book} size={16} /> Proclamation <span className="ml-auto" style={{ color: 'var(--muted)' }}><Icon d={I.external} size={13} /></span>
-                            </a>
-                            <a className="side-link" href="https://www.wikisubmission.org/quran/introduction" target="_blank" rel="noopener">
-                                <Icon d={I.book} size={16} /> Introduction <span className="ml-auto" style={{ color: 'var(--muted)' }}><Icon d={I.external} size={13} /></span>
-                            </a>
+                            <button className="side-link" onClick={() => openDoc('proclamation')}>
+                                <Icon d={I.book} size={16} /> Proclamation <span className="ml-auto" style={{ color: 'var(--muted)' }}><Icon d={I.right} size={14} /></span>
+                            </button>
+                            <button className="side-link" onClick={() => openDoc('introduction')}>
+                                <Icon d={I.book} size={16} /> Introduction <span className="ml-auto" style={{ color: 'var(--muted)' }}><Icon d={I.right} size={14} /></span>
+                            </button>
                         </div>
 
                         <div className="px-4 pt-4 pb-2 eyebrow shrink-0">114 Chapters</div>
@@ -2272,21 +2307,6 @@
                         <main className="max-w-5xl mx-auto px-4">
                             {/* Hero */}
                             <section className="ws-card relative rounded-3xl mt-6 px-6 sm:px-12 pt-11 pb-9 text-center paper-dots">
-                                {/* Bayyinah badge — small right section */}
-                                <button onClick={() => setAskOpen(true)}
-                                        className="hidden lg:flex absolute top-5 right-5 flex-col items-center px-4 pt-4 pb-3 rounded-2xl cursor-pointer ws-card ws-card-hover"
-                                        style={{ width: 158, borderColor: 'color-mix(in srgb, var(--gold) 42%, transparent)' }}>
-                                    <BayyinahLogo size={64} />
-                                    <span className="font-display text-[17px] mt-1.5" style={{ color: 'var(--ink)' }}>Bayyinah</span>
-                                    <span className="text-[11px] font-bold mt-0.5" style={{ color: 'var(--accent-deep)' }}>
-                                        <span className="font-arabic" dir="rtl" style={{ fontSize: 14 }}>الْبَيِّنَة</span> · The Proof
-                                    </span>
-                                    <span className="font-tamil text-[11px]" style={{ color: 'var(--muted)' }}>சான்று</span>
-                                    <span className="text-[9.5px] font-bold tracking-wider uppercase mt-1.5 px-2 py-1 rounded-full"
-                                          style={{ background: 'color-mix(in srgb, var(--accent) 12%, transparent)', color: 'var(--accent-deep)' }}>
-                                        AI Quran Assistant
-                                    </span>
-                                </button>
                                 <div className="font-arabic mb-3" dir="rtl" lang="ar" style={{ fontSize: 26, color: 'var(--gold)' }}>بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div>
                                 <div className="font-display hero-title tracking-tight" style={{ fontSize: 'clamp(34px, 6vw, 54px)', fontWeight: 700, lineHeight: 1.1 }}>
                                     Quran
@@ -2321,8 +2341,8 @@
 
                                 {/* Books row */}
                                 <div className="grid sm:grid-cols-2 gap-3 mt-9 text-left">
-                                    <a href="https://www.wikisubmission.org/proclamation" target="_blank" rel="noopener"
-                                       className="ws-card ws-card-hover rounded-2xl px-5 py-4 flex items-start justify-between gap-3 no-underline">
+                                    <button onClick={() => openDoc('proclamation')}
+                                            className="ws-card ws-card-hover rounded-2xl px-5 py-4 flex items-start justify-between gap-3 text-left w-full cursor-pointer">
                                         <div>
                                             <div className="flex items-center gap-2 font-bold text-[15px]" style={{ color: 'var(--ink)' }}>
                                                 <span style={{ color: 'var(--accent)' }}><Icon d={I.book} size={17} /></span> Proclamation
@@ -2332,9 +2352,9 @@
                                             </div>
                                         </div>
                                         <span className="mt-1 shrink-0" style={{ color: 'var(--muted)' }}><Icon d={I.arrowR} size={16} /></span>
-                                    </a>
-                                    <a href="https://www.wikisubmission.org/quran/introduction" target="_blank" rel="noopener"
-                                       className="ws-card ws-card-hover rounded-2xl px-5 py-4 flex items-start justify-between gap-3 no-underline">
+                                    </button>
+                                    <button onClick={() => openDoc('introduction')}
+                                            className="ws-card ws-card-hover rounded-2xl px-5 py-4 flex items-start justify-between gap-3 text-left w-full cursor-pointer">
                                         <div>
                                             <div className="flex items-center gap-2 font-bold text-[15px]" style={{ color: 'var(--ink)' }}>
                                                 <span style={{ color: 'var(--accent)' }}><Icon d={I.book} size={17} /></span> Introduction
@@ -2344,7 +2364,7 @@
                                             </div>
                                         </div>
                                         <span className="mt-1 shrink-0" style={{ color: 'var(--muted)' }}><Icon d={I.arrowR} size={16} /></span>
-                                    </a>
+                                    </button>
                                 </div>
                             </section>
 
@@ -2464,6 +2484,50 @@
                                         onExplain={v => setAiSel(v)} />
                                 ))}
                             </div>
+                        </main>
+                    )}
+
+                    {/* ══ DOCUMENT (Proclamation / Introduction) ══ */}
+                    {view === 'doc' && docId && (
+                        <main className="max-w-3xl mx-auto px-4">
+                            <section className="mt-6">
+                                <button className="toc-btn" onClick={() => { setView('home'); window.scrollTo({ top: 0 }); }}>
+                                    <Icon d={I.left} size={15} /> Back
+                                </button>
+                            </section>
+                            {docLoading && (
+                                <div className="ws-card rounded-2xl p-10 mt-5 text-center" style={{ color: 'var(--muted)' }}>
+                                    <span className="spin inline-flex mr-2"><Icon d={I.loader} size={15} /></span> Loading…
+                                </div>
+                            )}
+                            {docData && (
+                                <article className="ws-card rounded-3xl mt-5 px-6 sm:px-10 py-9">
+                                    <div className="text-center mb-8">
+                                        <div className="eyebrow">{docData.eyebrow}</div>
+                                        <h1 className="font-display hero-title tracking-tight mt-2 mb-0" style={{ fontSize: 'clamp(30px, 5vw, 44px)', fontWeight: 400 }}>{docData.title}</h1>
+                                        <Orn />
+                                        <p className="verse-en italic mt-0 mb-0 text-[15px]" style={{ color: 'var(--muted)' }}>{docData.subtitle}</p>
+                                    </div>
+                                    {docData.sections.map((sec, si) => (
+                                        <section key={si}>
+                                            {sec.h && <h2 className="font-display text-[21px] mb-3 mt-9" style={{ color: 'var(--accent-deep)', fontWeight: 400 }}>{sec.h}</h2>}
+                                            {sec.items.map((it, ii) => it.t === 'q' ? (
+                                                <blockquote key={ii} className="my-5 ml-0 mr-0 pl-5 py-0.5" style={{ borderLeft: '3px solid color-mix(in srgb, var(--gold) 65%, transparent)' }}>
+                                                    <p className="verse-en italic text-[16px] leading-relaxed m-0" style={{ color: 'var(--ink)' }}>
+                                                        <DocText text={it.text} onRef={goToVerse} />
+                                                    </p>
+                                                    {it.by && <div className="eyebrow mt-2" style={{ fontSize: 10 }}>{it.by}</div>}
+                                                </blockquote>
+                                            ) : (
+                                                <p key={ii} className="verse-en text-[16px] mb-4" style={{ color: 'var(--ink-soft)', lineHeight: 1.85 }}>
+                                                    <DocText text={it.text} onRef={goToVerse} />
+                                                </p>
+                                            ))}
+                                        </section>
+                                    ))}
+                                    <div className="ornament" aria-hidden="true">✦</div>
+                                </article>
+                            )}
                         </main>
                     )}
 
