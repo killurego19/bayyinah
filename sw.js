@@ -4,9 +4,9 @@
      • navigations (HTML)    → network-first, fall back to cached shell when offline
      • static assets         → stale-while-revalidate
 */
-const VERSION = "bayyinah-v2";
+const VERSION = "bayyinah-v3";
 const SHELL = [
-  "/", "/index.html", "/manifest.webmanifest", "/appendices.json",
+  "/", "/reader.html", "/index.html", "/manifest.webmanifest", "/appendices.json",
   "/fonts/uthmanic-hafs.woff2",
   "/icons/icon-192.png", "/icons/icon-512.png", "/icons/apple-touch-icon.png"
 ];
