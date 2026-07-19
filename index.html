@@ -754,6 +754,7 @@
             spark: ["M12 2l2.2 5.9L20 10l-5.8 2.1L12 18l-2.2-5.9L4 10l5.8-2.1L12 2z", "M19 15l1 2.7 2.7 1.3-2.7 1-1 2.7-1-2.7-2.7-1 2.7-1.3 1-2.7z"],
             send: ["M22 2 11 13", "M22 2 15 22 11 13 2 9 22 2"],
             help: ["M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z", "M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3", "M12 17h.01"],
+            download: ["M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4", "M7 10l5 5 5-5", "M12 15V3"],
         };
 
         const Orn = () => <div className="ornament" aria-hidden="true">✦</div>;
@@ -1875,6 +1876,8 @@
             const [installEvt, setInstallEvt] = useState(null);
             const [showInstall, setShowInstall] = useState(false);
             const [iosInstall, setIosInstall] = useState(false);
+            const [installHelp, setInstallHelp] = useState(false);
+            const [isApp, setIsApp] = useState(false);
 
             useEffect(() => {
                 const dismissedAt = Number(localStorage.getItem('bayyinahInstallDismissed') || 0);
@@ -1886,13 +1889,14 @@
                     setShowInstall(true);
                 };
                 const onInstalled = () => {
-                    setShowInstall(false); setIosInstall(false);
+                    setShowInstall(false); setIosInstall(false); setInstallHelp(false); setIsApp(true);
                     localStorage.setItem('bayyinahInstalled', '1');
                 };
                 window.addEventListener('beforeinstallprompt', onBip);
                 window.addEventListener('appinstalled', onInstalled);
                 const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
                 const standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone;
+                if (standalone) setIsApp(true);
                 if (isIOS && !standalone && !recentlyDismissed) setIosInstall(true);
                 return () => {
                     window.removeEventListener('beforeinstallprompt', onBip);
@@ -1901,8 +1905,12 @@
             }, []);
 
             const dismissInstall = () => {
-                setShowInstall(false); setIosInstall(false);
+                setShowInstall(false); setIosInstall(false); setInstallHelp(false);
                 localStorage.setItem('bayyinahInstallDismissed', String(Date.now()));
+            };
+            const installClick = () => {
+                if (installEvt && typeof installEvt.prompt === 'function') { doInstall(); return; }
+                setInstallHelp(true);
             };
             const doInstall = async () => {
                 if (!installEvt || typeof installEvt.prompt !== 'function') return;
@@ -2375,6 +2383,15 @@
                                 </button>
                             ))}
                         </div>
+                        {!isApp && (
+                            <div className="px-3 py-2.5 shrink-0" style={{ borderTop: '1px solid var(--line)' }}>
+                                <button className="side-link" onClick={() => { installClick(); if (window.innerWidth < 1024) setSidebarOpen(false); }}
+                                        style={{ color: 'var(--accent-deep)' }}>
+                                    <span style={{ color: 'var(--gold)' }}><Icon d={I.download} size={16} /></span> Install app
+                                    <span className="ml-auto" style={{ color: 'var(--muted)' }}><Icon d={I.right} size={14} /></span>
+                                </button>
+                            </div>
+                        )}
                     </aside>
 
                     {/* ── Sticky top bar ── */}
@@ -2761,7 +2778,7 @@
                     )}
 
                     {/* ── install banner ── */}
-                    {(showInstall || iosInstall) && (
+                    {(showInstall || iosInstall || installHelp) && (
                         <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:w-[430px] z-[46] fade-in">
                             <div className="ws-card rounded-2xl px-4 py-4 flex items-center gap-3.5"
                                  style={{ borderColor: 'color-mix(in srgb, var(--gold) 45%, transparent)', boxShadow: 'var(--shadow-lg)' }}>
@@ -2771,7 +2788,9 @@
                                     <div className="text-[12px] mt-0.5" style={{ color: 'var(--muted)' }}>
                                         {showInstall
                                             ? 'Read, listen and study the Quran — as an app on your device.'
-                                            : 'Tap Share, then "Add to Home Screen" to use Bayyinah as an app.'}
+                                            : (/iphone|ipad|ipod/i.test(navigator.userAgent)
+                                                ? 'Tap Share, then "Add to Home Screen" to use Bayyinah as an app.'
+                                                : 'Open your browser menu (⋮) and choose "Install app" or "Add to Home screen". On desktop Chrome, you can also use the install icon at the right end of the address bar.')}
                                     </div>
                                     <div className="flex items-center gap-2 mt-2.5">
                                         {showInstall && (
@@ -2781,7 +2800,7 @@
                                                 Install now
                                             </button>
                                         )}
-                                        <button onClick={dismissInstall} className="lang-pill rounded-full text-[12.5px] font-bold px-4 py-1.5">Later</button>
+                                        <button onClick={dismissInstall} className="lang-pill rounded-full text-[12.5px] font-bold px-4 py-1.5">{showInstall ? 'Later' : 'OK'}</button>
                                     </div>
                                 </div>
                                 <button className="icon-btn shrink-0 self-start" style={{ width: 28, height: 28 }} onClick={dismissInstall}><Icon d={I.x} size={14} /></button>
@@ -2790,7 +2809,7 @@
                     )}
 
                     {/* ── floating Bayyinah button ── */}
-                    {!askOpen && !aiSel && !wordSel && !quizOpen && !showInstall && !iosInstall && (
+                    {!askOpen && !aiSel && !wordSel && !quizOpen && !showInstall && !iosInstall && !installHelp && (
                         <button className="fab-ask" onClick={() => setAskOpen(true)} title="Ask Bayyinah" aria-label="Ask Bayyinah">
                             <BayyinahLogo size={52} />
                         </button>
