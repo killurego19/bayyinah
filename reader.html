@@ -548,6 +548,12 @@
         }
         .icon-btn:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent-deep); }
         .icon-btn.active { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent-deep); border-color: var(--line-strong); }
+        .icon-btn.bm-on {
+            color: var(--gold);
+            background: color-mix(in srgb, var(--gold) 16%, transparent);
+            border-color: color-mix(in srgb, var(--gold) 50%, transparent);
+        }
+        .icon-btn.bm-on svg { fill: var(--gold); stroke: var(--gold); }
 
         ::selection { background: color-mix(in srgb, var(--gold) 40%, transparent); }
 
@@ -1615,7 +1621,7 @@
                             {onExplain && !isBasmalah && (
                                 <button className="icon-btn" onClick={() => onExplain(verse)} title="Explain & discuss (AI)"><Icon d={I.spark} size={16} /></button>
                             )}
-                            <button className={`icon-btn ${bookmarked ? 'active' : ''}`} onClick={() => onBookmark(s, a)} title="Bookmark">
+                            <button className={`icon-btn ${bookmarked ? 'active bm-on' : ''}`} onClick={() => onBookmark(s, a)} title={bookmarked ? 'Remove bookmark' : 'Bookmark'}>
                                 <Icon d={I.bookmark} size={16} />
                             </button>
                             <button className="icon-btn" onClick={() => onCopy(verse)} title="Copy"><Icon d={I.copy} size={16} /></button>
@@ -2079,7 +2085,9 @@
             // ── verse actions ──
             const toggleBookmark = (s, a) => {
                 const key = `${s}:${a}`;
-                setBookmarks(b => b.includes(key) ? b.filter(x => x !== key) : [...b, key]);
+                const has = bookmarks.includes(key);
+                setBookmarks(b => has ? b.filter(x => x !== key) : [...b, key]);
+                flash(has ? 'Bookmark removed' : 'Bookmark saved');
             };
             const copyVerse = v => {
                 const bits = [`[${v.Surah}:${v.Ayah}]`];
@@ -2333,14 +2341,6 @@
                                     />
                                 </div>
 
-                                <div className="mt-4">
-                                    <button onClick={() => setAskOpen(true)}
-                                            className="inline-flex items-center gap-2.5 px-6 py-3 rounded-full text-[15px] font-bold cursor-pointer"
-                                            style={{ background: 'var(--accent)', color: 'var(--bg-soft)', border: 'none', boxShadow: 'var(--shadow-lg)' }}>
-                                        <Icon d={I.spark} size={16} /> Ask Bayyinah — AI Quran assistant
-                                    </button>
-                                </div>
-
                                 {/* Books row */}
                                 <div className="grid sm:grid-cols-2 gap-3 mt-9 text-left">
                                     <button onClick={() => openDoc('proclamation')}
@@ -2366,6 +2366,14 @@
                                             </div>
                                         </div>
                                         <span className="mt-1 shrink-0" style={{ color: 'var(--muted)' }}><Icon d={I.arrowR} size={16} /></span>
+                                    </button>
+                                </div>
+
+                                <div className="mt-6">
+                                    <button onClick={() => setAskOpen(true)}
+                                            className="inline-flex items-center gap-2.5 px-6 py-3 rounded-full text-[15px] font-bold cursor-pointer"
+                                            style={{ background: 'var(--accent)', color: 'var(--bg-soft)', border: 'none', boxShadow: 'var(--shadow-lg)' }}>
+                                        <Icon d={I.spark} size={16} /> Ask Bayyinah — AI Quran assistant
                                     </button>
                                 </div>
                             </section>
