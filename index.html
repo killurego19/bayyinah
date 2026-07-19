@@ -1250,13 +1250,39 @@
                     })
                 });
                 const d = await r.json().catch(() => { throw new Error('Bayyinah is unavailable right now — please try again in a moment.'); });
-                const m = String(d.text || '').match(/\{[\s\S]*\}/);
-                const j = JSON.parse(m[0]);
+                const m = cleanAiJson(d.text).match(/\{[\s\S]*\}/);
+                const j = JSON.parse(m[0].replace(/,\s*([\]}])/g, '$1'));
                 return {
                     terms: Array.isArray(j.terms) ? j.terms.map(String).slice(0, 8) : [],
                     refs: Array.isArray(j.refs) ? j.refs.map(String).slice(0, 10) : []
                 };
             } catch (e) { return { terms: [], refs: [] }; }
+        }
+
+        // tolerant JSON repair — AI output sometimes has fences, smart quotes, trailing commas
+        function cleanAiJson(text) {
+            let x = String(text || '').replace(/```[a-z]*/gi, '').replace(/```/g, '');
+            return x.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+        }
+
+        function extractQuizArray(text) {
+            const raw = cleanAiJson(text);
+            let x = raw;
+            const m = raw.match(/\[[\s\S]*\]/);
+            if (m) x = m[0];
+            x = x.replace(/,\s*([\]}])/g, '$1');
+            let arr = null;
+            try { arr = JSON.parse(x); } catch (e) {
+                arr = [];
+                const re = /\{[\s\S]*?\}/g;
+                let mm;
+                while ((mm = re.exec(raw))) {
+                    try { arr.push(JSON.parse(mm[0].replace(/,\s*([\]}])/g, '$1'))); } catch (e2) {}
+                }
+            }
+            if (!Array.isArray(arr)) return [];
+            return arr.filter(q => q && q.q && Array.isArray(q.options) && q.options.length >= 3 &&
+                typeof q.a === 'number' && q.a >= 0 && q.a < q.options.length).slice(0, 5);
         }
 
         function versesByRefs(verses, refs) {
@@ -1445,7 +1471,8 @@
         // ─── Quran Quiz — AI-curated questions from the chapter ───────────
         function QuizPanel({ surah, verses, onClose, onGoToVerse }) {
             const meta = surahs[surah - 1];
-            const lang = localStorage.getItem('bayyinahAnsLang') || 'en';
+            const [lang, setLang] = useState(() => localStorage.getItem('bayyinahAnsLang') || 'en');
+            useEffect(() => { localStorage.setItem('bayyinahAnsLang', lang); }, [lang]);
             const [questions, setQuestions] = useState(null);
             const [idx, setIdx] = useState(0);
             const [picked, setPicked] = useState(null);
@@ -1453,7 +1480,7 @@
             const [loading, setLoading] = useState(false);
             const [error, setError] = useState(null);
 
-            const generate = async () => {
+            const generate = async (attempt = 0) => {
                 setLoading(true); setError(null); setQuestions(null); setIdx(0); setScore(0); setPicked(null);
                 try {
                     let chap = verses.filter(v => Number(v.Surah) === surah && Number(v.Ayah) > 0);
@@ -1474,22 +1501,24 @@
                                     '[{"q": "question", "options": ["A","B","C","D"], "a": indexOfCorrect0to3, "ref": "sura:verse"}] ' +
                                     'Each question must be answerable from the provided verses alone; "ref" is the verse that proves the answer.\n\nVERSES:\n' + ctx,
                             messages: [{ role: 'user', content: 'Generate the quiz.' }],
-                            maxTokens: 1600
+                            maxTokens: 2000
                         })
                     });
                     const d = await r.json().catch(() => { throw new Error('Bayyinah is unavailable right now — please try again in a moment.'); });
                     if (!r.ok || !d.text) throw new Error(d.error || 'Quiz generation failed.');
-                    const m = String(d.text).match(/\[[\s\S]*\]/);
-                    const qs = JSON.parse(m[0]).filter(q =>
-                        q && q.q && Array.isArray(q.options) && q.options.length >= 3 &&
-                        typeof q.a === 'number' && q.a >= 0 && q.a < q.options.length).slice(0, 5);
-                    if (!qs.length) throw new Error('Could not build quiz questions — try again.');
+                    const qs = extractQuizArray(d.text);
+                    if (!qs.length) throw new Error('quiz-parse');
                     setQuestions(qs);
-                } catch (e) { setError(String(e.message || e)); }
+                } catch (e) {
+                    if (attempt < 1) return generate(attempt + 1);   // silent second try
+                    setError(String(e.message) === 'quiz-parse'
+                        ? 'The quiz did not come out right this time — please tap Retry.'
+                        : String(e.message || e));
+                }
                 setLoading(false);
             };
 
-            useEffect(() => { generate(); }, [surah]);
+            useEffect(() => { generate(); }, [surah, lang]);
 
             const q = questions ? questions[idx] : null;
             const done = questions && idx >= questions.length;
@@ -1501,17 +1530,28 @@
                          className="sheet-enter absolute bottom-0 left-0 right-0 sm:left-auto sm:top-0 sm:h-full sm:w-[470px] max-h-[90vh] sm:max-h-full rounded-t-3xl sm:rounded-none flex flex-col"
                          style={{ background: 'var(--bg-soft)', boxShadow: 'var(--shadow-lg)', borderLeft: '1px solid var(--line)' }}>
 
-                        <div className="px-5 pt-4 pb-3 shrink-0 flex items-center justify-between" style={{ borderBottom: '1px solid var(--line)' }}>
-                            <div className="flex items-center gap-3">
-                                <BayyinahLogo size={36} />
-                                <div>
-                                    <div className="font-display text-[17px] leading-tight" style={{ color: 'var(--ink)' }}>Quran Quiz</div>
-                                    <div className="text-[11.5px]" style={{ color: 'var(--muted)' }}>
-                                        Chapter {surah} · {meta.en.replace(/\s*\(.*\)$/, '')}
+                        <div className="px-5 pt-4 pb-3 shrink-0" style={{ borderBottom: '1px solid var(--line)' }}>
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <BayyinahLogo size={36} />
+                                    <div>
+                                        <div className="font-display text-[17px] leading-tight" style={{ color: 'var(--ink)' }}>Quran Quiz</div>
+                                        <div className="text-[11.5px]" style={{ color: 'var(--muted)' }}>
+                                            Chapter {surah} · {meta.en.replace(/\s*\(.*\)$/, '')}
+                                        </div>
                                     </div>
                                 </div>
+                                <button className="icon-btn" onClick={onClose}><Icon d={I.x} /></button>
                             </div>
-                            <button className="icon-btn" onClick={onClose}><Icon d={I.x} /></button>
+                            <div className="flex items-center gap-1.5 mt-3">
+                                {[['en', 'English'], ['ta', 'தமிழ்']].map(([k, label]) => (
+                                    <button key={k} onClick={() => setLang(k)} disabled={loading}
+                                            className={'lang-pill rounded-full font-bold text-xs px-3 py-1.5 ' + (lang === k ? 'on' : '') + (k === 'ta' ? ' font-tamil' : '')}>
+                                        {label}
+                                    </button>
+                                ))}
+                                <span className="text-[11px] ml-auto" style={{ color: 'var(--muted)' }}>questions from this chapter</span>
+                            </div>
                         </div>
 
                         <div className="flex-1 overflow-y-auto px-5 py-5">
@@ -1526,7 +1566,7 @@
                             {error && !loading && (
                                 <div className="rounded-2xl px-4 py-3 text-sm" style={{ background: 'color-mix(in srgb, #dc2626 10%, transparent)', color: 'var(--ink-soft)' }}>
                                     {error}
-                                    <button className="lang-pill rounded-full text-xs font-bold px-3 py-1 ml-2" onClick={generate}>Retry</button>
+                                    <button className="lang-pill rounded-full text-xs font-bold px-3 py-1 ml-2" onClick={() => generate(0)}>Retry</button>
                                 </div>
                             )}
                             {q && !done && !loading && (
@@ -2432,6 +2472,11 @@
                                              className="ws-card ws-card-hover rounded-xl px-4 py-3 cursor-pointer">
                                             <div style={{ color: 'var(--gold)' }}><Icon d={I.shuffle} size={15} /></div>
                                             <div className="font-semibold text-[14px] mt-1" style={{ color: 'var(--muted)' }}>Random Verse</div>
+                                        </div>
+                                        <div onClick={() => { const s2 = 1 + Math.floor(Math.random() * 114); openSurah(s2); setQuizOpen(s2); }}
+                                             className="ws-card ws-card-hover rounded-xl px-4 py-3 cursor-pointer">
+                                            <div style={{ color: 'var(--gold)' }}><Icon d={I.help} size={15} /></div>
+                                            <div className="font-semibold text-[14px] mt-1" style={{ color: 'var(--muted)' }}>Quran Quiz</div>
                                         </div>
                                         {surahs.map((su, i) => (
                                             <div key={i} onClick={() => openSurah(i + 1)}
