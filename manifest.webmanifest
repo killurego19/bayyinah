@@ -1,17 +1,31 @@
 {
-  "name": "Bayyinah — Quran Study Assistant",
+  "name": "Bayyinah — Quran: The Final Testament",
   "short_name": "Bayyinah",
-  "description": "A bilingual (English & Tamil) Quran study assistant based on Dr. Rashad Khalifa's translation.",
+  "description": "Bilingual (English & Tamil) Quran reader and AI study assistant based on Dr. Rashad Khalifa's translation.",
   "lang": "en",
   "dir": "ltr",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#0c1411",
-  "theme_color": "#0c1411",
-  "categories": ["education", "books", "lifestyle"],
+  "background_color": "#f3f5fa",
+  "theme_color": "#2f4fa2",
+  "categories": [
+    "education",
+    "books",
+    "lifestyle"
+  ],
   "icons": [
-    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
   ]
 }
