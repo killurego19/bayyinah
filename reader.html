@@ -1192,6 +1192,7 @@
                         </div>
 
                         <div ref={bodyRef} className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+                            <AiDisclaimer lang={ansLang} />
                             {thread.map((m, i) => (
                                 m.role === 'user' ? (
                                     <div key={i} className="ml-8 rounded-2xl px-4 py-2.5 text-sm font-semibold"
@@ -1268,6 +1269,26 @@
             }
             return out;
         }
+
+
+        // ─── AI disclaimer — shown whenever Bayyinah opens ────────────────
+        const AiDisclaimer = ({ lang }) => (
+            <div className="rounded-2xl px-4 py-3 text-[12.5px] leading-relaxed"
+                 style={{ background: 'color-mix(in srgb, var(--gold) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--gold) 40%, transparent)', color: 'var(--ink-soft)' }}>
+                <div className="flex items-start gap-2.5">
+                    <span className="shrink-0 mt-0.5" style={{ color: 'var(--gold)' }}><Icon d={I.help} size={15} /></span>
+                    {lang === 'ta' ? (
+                        <p className="m-0 font-tamil">
+                            <b>பய்யினாவின் குறிப்பு:</b> மனிதர்கள் காலப்போக்கில் குர்ஆனை மேலும் ஆழமாகப் புரிந்துகொள்வது போல், நானும் ஓர் AI ஆகத் தொடர்ந்து கற்றுக்கொண்டிருக்கிறேன். என் பதில்கள் குர்ஆன் வசனங்களின் அடிப்படையில் அமைந்தவை; இருப்பினும், சில நேரங்களில் அவை 100% சரியாகவோ முழுமையாகவோ இல்லாமல் இருக்கலாம். தயவுசெய்து என் பதில்களை மட்டும் நம்பி முடிவு செய்யாதீர்கள் — சுட்டிக்காட்டப்பட்ட வசனங்களை நீங்களே வாசித்து, சிந்தித்து, குர்ஆனுடன் நேரடியாகச் சரிபார்த்துக்கொள்ளுங்கள். கடவுள் நம் அனைவருக்கும் நேர்வழி காட்டுவாராக.
+                        </p>
+                    ) : (
+                        <p className="m-0">
+                            <b>A note from Bayyinah:</b> Just like humans grow in their understanding of the Quran over time, I am an AI and I am also learning. My answers are grounded in the verses of the Quran, but sometimes they may not be 100% correct or complete. Please do not rely on my answers alone — read the cited verses yourself, reflect on them, and verify everything directly with the Quran. May God guide us all.
+                        </p>
+                    )}
+                </div>
+            </div>
+        );
 
         // ─── Ask Bayyinah — the full assistant, integrated ────────────────
         function AskPanel({ verses, onClose, onGoToVerse }) {
@@ -1363,6 +1384,7 @@
                         </div>
 
                         <div ref={bodyRef} className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+                            <AiDisclaimer lang={ansLang} />
                             {thread.length === 0 && !loading && (
                                 <div className="text-center pt-6 pb-2">
                                     <div className="flex justify-center mb-4"><BayyinahLogo size={96} /></div>
