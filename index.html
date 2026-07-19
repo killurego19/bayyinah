@@ -2433,6 +2433,11 @@
                                             <div style={{ color: 'var(--gold)' }}><Icon d={I.shuffle} size={15} /></div>
                                             <div className="font-semibold text-[14px] mt-1" style={{ color: 'var(--muted)' }}>Random Verse</div>
                                         </div>
+                                        <div onClick={() => { const s2 = 1 + Math.floor(Math.random() * 114); openSurah(s2); setQuizOpen(s2); }}
+                                             className="ws-card ws-card-hover rounded-xl px-4 py-3 cursor-pointer">
+                                            <div style={{ color: 'var(--gold)' }}><Icon d={I.help} size={15} /></div>
+                                            <div className="font-semibold text-[14px] mt-1" style={{ color: 'var(--muted)' }}>Quran Quiz</div>
+                                        </div>
                                         {surahs.map((su, i) => (
                                             <div key={i} onClick={() => openSurah(i + 1)}
                                                  className="ws-card ws-card-hover rounded-xl px-4 py-3 cursor-pointer flex items-start justify-between gap-2">
