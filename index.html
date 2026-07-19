@@ -1872,6 +1872,45 @@
             const [aiSel, setAiSel] = useState(null);
             const [askOpen, setAskOpen] = useState(false);
             const [quizOpen, setQuizOpen] = useState(null);
+            const [installEvt, setInstallEvt] = useState(null);
+            const [showInstall, setShowInstall] = useState(false);
+            const [iosInstall, setIosInstall] = useState(false);
+
+            useEffect(() => {
+                const dismissedAt = Number(localStorage.getItem('bayyinahInstallDismissed') || 0);
+                const recentlyDismissed = Date.now() - dismissedAt < 3 * 24 * 3600 * 1000;
+                const onBip = e => {
+                    e.preventDefault();
+                    if (recentlyDismissed) return;
+                    setInstallEvt(e);
+                    setShowInstall(true);
+                };
+                const onInstalled = () => {
+                    setShowInstall(false); setIosInstall(false);
+                    localStorage.setItem('bayyinahInstalled', '1');
+                };
+                window.addEventListener('beforeinstallprompt', onBip);
+                window.addEventListener('appinstalled', onInstalled);
+                const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+                const standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone;
+                if (isIOS && !standalone && !recentlyDismissed) setIosInstall(true);
+                return () => {
+                    window.removeEventListener('beforeinstallprompt', onBip);
+                    window.removeEventListener('appinstalled', onInstalled);
+                };
+            }, []);
+
+            const dismissInstall = () => {
+                setShowInstall(false); setIosInstall(false);
+                localStorage.setItem('bayyinahInstallDismissed', String(Date.now()));
+            };
+            const doInstall = async () => {
+                if (!installEvt || typeof installEvt.prompt !== 'function') return;
+                installEvt.prompt();
+                try { await installEvt.userChoice; } catch (e) {}
+                setShowInstall(false);
+                setInstallEvt(null);
+            };
             const [semanticResults, setSemanticResults] = useState(null);
             const [semanticLoading, setSemanticLoading] = useState(false);
             const audioRef = useRef(null);
@@ -2721,8 +2760,37 @@
                                    onGoToVerse={(s, a) => { setQuizOpen(null); goToVerse(s, a); }} />
                     )}
 
+                    {/* ── install banner ── */}
+                    {(showInstall || iosInstall) && (
+                        <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:w-[430px] z-[46] fade-in">
+                            <div className="ws-card rounded-2xl px-4 py-4 flex items-center gap-3.5"
+                                 style={{ borderColor: 'color-mix(in srgb, var(--gold) 45%, transparent)', boxShadow: 'var(--shadow-lg)' }}>
+                                <BayyinahLogo size={46} />
+                                <div className="flex-1 min-w-0">
+                                    <div className="font-display text-[15.5px] leading-tight" style={{ color: 'var(--ink)' }}>Install Bayyinah</div>
+                                    <div className="text-[12px] mt-0.5" style={{ color: 'var(--muted)' }}>
+                                        {showInstall
+                                            ? 'Read, listen and study the Quran — as an app on your device.'
+                                            : 'Tap Share, then "Add to Home Screen" to use Bayyinah as an app.'}
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-2.5">
+                                        {showInstall && (
+                                            <button onClick={doInstall}
+                                                    className="px-4 py-1.5 rounded-full text-[12.5px] font-bold cursor-pointer"
+                                                    style={{ background: 'var(--accent)', color: 'var(--bg-soft)', border: 'none' }}>
+                                                Install now
+                                            </button>
+                                        )}
+                                        <button onClick={dismissInstall} className="lang-pill rounded-full text-[12.5px] font-bold px-4 py-1.5">Later</button>
+                                    </div>
+                                </div>
+                                <button className="icon-btn shrink-0 self-start" style={{ width: 28, height: 28 }} onClick={dismissInstall}><Icon d={I.x} size={14} /></button>
+                            </div>
+                        </div>
+                    )}
+
                     {/* ── floating Bayyinah button ── */}
-                    {!askOpen && !aiSel && !wordSel && !quizOpen && (
+                    {!askOpen && !aiSel && !wordSel && !quizOpen && !showInstall && !iosInstall && (
                         <button className="fab-ask" onClick={() => setAskOpen(true)} title="Ask Bayyinah" aria-label="Ask Bayyinah">
                             <BayyinahLogo size={52} />
                         </button>
@@ -2939,6 +3007,9 @@
                     <footer className="max-w-5xl mx-auto px-4 mt-16 pt-6 text-center text-xs" style={{ color: 'var(--muted)', borderTop: '1px solid var(--line)' }}>
                         Bayyinah · Quran: The Final Testament — translated by Rashad Khalifa, Ph.D. · with Tamil translation
                         <div className="mt-1">Word-by-word data & root dictionary courtesy of WikiSubmission / Tanzil (CC-BY)</div>
+                        <div className="mt-1.5 font-semibold" style={{ color: 'var(--accent-deep)' }}>
+                            <span style={{ color: 'var(--gold)' }}>✦</span> By MasjidIndia IT Team · Chennai
+                        </div>
                     </footer>
 
                     </div>
