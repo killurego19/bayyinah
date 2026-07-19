@@ -1611,7 +1611,7 @@
                         <div className="flex items-center gap-0.5 -mr-2 -mt-1">
                             {!isBasmalah && (playing === `${s}:${a}`
                                 ? <button className="icon-btn active" onClick={onStopAudio} title="Stop"><Icon d={I.stop} size={16} /></button>
-                                : <button className="icon-btn" onClick={() => onPlay(s, a)} title="Recite (Qari)"><Icon d={I.volume} size={16} /></button>)}
+                                : <button className="icon-btn" onClick={() => onPlay(s, a)} title="Listen — reads your selected languages"><Icon d={I.volume} size={16} /></button>)}
                             {onExplain && !isBasmalah && (
                                 <button className="icon-btn" onClick={() => onExplain(verse)} title="Explain & discuss (AI)"><Icon d={I.spark} size={16} /></button>
                             )}
@@ -1845,11 +1845,6 @@
 
             // ── audio & reading (recitation in ar/en/ta) ──
             const playTokenRef = useRef(0);
-            const [playLangs, setPlayLangs] = useState(() => {
-                try { return JSON.parse(localStorage.getItem('quranPlayLangs')) || { ar: true, en: false, ta: false }; }
-                catch (e) { return { ar: true, en: false, ta: false }; }
-            });
-            useEffect(() => { localStorage.setItem('quranPlayLangs', JSON.stringify(playLangs)); }, [playLangs]);
 
             // warm up the speech-synthesis voice list (async on some browsers)
             useEffect(() => {
@@ -1937,7 +1932,8 @@
             const playVerseSeq = useCallback(async (s, a, token) => {
                 const v = verses.find(x => Number(x.Surah) === s && Number(x.Ayah) === a);
                 setPlaying(`${s}:${a}`);
-                const langs = (playLangs.ar || playLangs.en || playLangs.ta) ? playLangs : { ar: true };
+                // read aloud in exactly the languages the user has selected in Settings
+                const langs = (show.ar || show.en || show.ta) ? show : { ar: true };
                 if (langs.ar) { await playQari(s, a, token); if (playTokenRef.current !== token) return; }
                 if (langs.en && v && v.English) { await speak(v.English, 'en'); if (playTokenRef.current !== token) return; }
                 if (langs.ta && v && v.Tamil) {
@@ -1945,7 +1941,7 @@
                     catch (e) { await speak(v.Tamil, 'ta'); }
                     if (playTokenRef.current !== token) return;
                 }
-            }, [playLangs, verses]);
+            }, [show, verses]);
 
             const playSingle = useCallback(async (s, a) => {
                 stopAudio();
@@ -2315,9 +2311,15 @@
                                     The Final Testament
                                 </h1>
                                 <Orn />
-                                <p className="mt-0 mb-7 text-[15px]" style={{ color: 'var(--muted)' }}>
+                                <p className="mt-0 mb-3 text-[15px]" style={{ color: 'var(--muted)' }}>
                                     Authorized English Version — translated by Rashad Khalifa, Ph.D. · with Tamil translation
                                 </p>
+                                <div className="mb-6">
+                                    <span className="inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-full"
+                                          style={{ background: 'color-mix(in srgb, var(--gold) 13%, transparent)', color: 'var(--accent-deep)', border: '1px solid color-mix(in srgb, var(--gold) 45%, transparent)' }}>
+                                        ✦ हिन्दी — Hindi translation coming soon
+                                    </span>
+                                </div>
 
                                 {/* Search */}
                                 <div className="max-w-xl mx-auto relative">
@@ -2665,18 +2667,16 @@
                                     ))}
                                 </div>
 
-                                <div className="eyebrow mb-2">Listen · reading voices</div>
-                                <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                    {[['ar', 'Qari · قارئ'], ['en', 'English voice'], ['ta', 'தமிழ் voice']].map(([k, label]) => (
-                                        <button key={k}
-                                                onClick={() => setPlayLangs(p => ({ ...p, [k]: !p[k] }))}
-                                                className={`lang-pill rounded-full font-bold text-[13px] px-3.5 py-2 ${playLangs[k] ? 'on' : ''} ${k === 'ta' ? 'font-tamil' : ''}`}>
-                                            {label}
-                                        </button>
-                                    ))}
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="lang-pill rounded-full font-bold text-sm px-4 py-2" style={{ opacity: .55, cursor: 'default' }}>हिन्दी</span>
+                                    <span className="text-[11px] font-bold px-2.5 py-1 rounded-full"
+                                          style={{ background: 'color-mix(in srgb, var(--gold) 14%, transparent)', color: 'var(--accent-deep)', border: '1px solid color-mix(in srgb, var(--gold) 45%, transparent)' }}>
+                                        Hindi translation — coming soon
+                                    </span>
                                 </div>
                                 <p className="text-[12px] mt-1 mb-3" style={{ color: 'var(--muted)' }}>
-                                    The speaker button on a verse — and Play chapter — reads it in each enabled language, in order.
+                                    The speaker button on a verse — and Play chapter — read aloud in every language selected above
+                                    (Qari recitation for Arabic, natural voices for English &amp; Tamil), in order.
                                 </p>
                                 <button className="toc-btn w-full justify-center mb-5"
                                         onClick={() => {
