@@ -13,6 +13,15 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Bayyinah">
+    <script>
+        /* Chrome fires beforeinstallprompt very early — catch it before the app loads */
+        window.__bipEvent = null;
+        window.addEventListener('beforeinstallprompt', function (e) {
+            e.preventDefault();
+            window.__bipEvent = e;
+            window.dispatchEvent(new Event('bip-captured'));
+        });
+    </script>
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -1882,17 +1891,20 @@
             useEffect(() => {
                 const dismissedAt = Number(localStorage.getItem('bayyinahInstallDismissed') || 0);
                 const recentlyDismissed = Date.now() - dismissedAt < 3 * 24 * 3600 * 1000;
-                const onBip = e => {
-                    e.preventDefault();
-                    if (recentlyDismissed) return;
-                    setInstallEvt(e);
-                    setShowInstall(true);
+                const adopt = e => {
+                    if (!e) return;
+                    setInstallEvt(e);                       // sidebar button always gets the native dialog
+                    if (!recentlyDismissed) setShowInstall(true);   // banner respects the snooze
                 };
+                const onBip = e => { e.preventDefault(); adopt(e); };
+                const onCaptured = () => adopt(window.__bipEvent);
+                if (window.__bipEvent) adopt(window.__bipEvent);
                 const onInstalled = () => {
                     setShowInstall(false); setIosInstall(false); setInstallHelp(false); setIsApp(true);
                     localStorage.setItem('bayyinahInstalled', '1');
                 };
                 window.addEventListener('beforeinstallprompt', onBip);
+                window.addEventListener('bip-captured', onCaptured);
                 window.addEventListener('appinstalled', onInstalled);
                 const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
                 const standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone;
@@ -1900,6 +1912,7 @@
                 if (isIOS && !standalone && !recentlyDismissed) setIosInstall(true);
                 return () => {
                     window.removeEventListener('beforeinstallprompt', onBip);
+                    window.removeEventListener('bip-captured', onCaptured);
                     window.removeEventListener('appinstalled', onInstalled);
                 };
             }, []);
@@ -1918,6 +1931,7 @@
                 try { await installEvt.userChoice; } catch (e) {}
                 setShowInstall(false);
                 setInstallEvt(null);
+                window.__bipEvent = null;
             };
             const [semanticResults, setSemanticResults] = useState(null);
             const [semanticLoading, setSemanticLoading] = useState(false);
