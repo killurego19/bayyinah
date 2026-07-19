@@ -1,0 +1,34 @@
+# Bayyinah — Quran: The Final Testament
+
+> Bayyinah (الْبَيِّنَة, "The Proof") is a bilingual English & Tamil Quran study app:
+> a complete Quran reader with word-by-word Arabic root analysis, and an AI study
+> assistant whose answers are grounded in the Quran itself — based on the translation
+> "Quran: The Final Testament" by Rashad Khalifa, Ph.D. (God Alone · Quran Alone).
+
+## Pages
+
+- [Full Reader](https://bayyinah-chi.vercel.app/reader.html): all 114 chapters with
+  Verse / Word / Reading view modes; clickable Arabic words showing transliteration,
+  meaning, root, root-dictionary entries and every occurrence of the root; English and
+  Tamil translations with subtitles and footnotes; Qari recitation plus English and
+  Tamil reading voices with range playback; search; the Ask Bayyinah AI assistant and
+  per-verse AI explanations with tappable verse citations.
+- [Assistant](https://bayyinah-chi.vercel.app/): the Bayyinah chat assistant with
+  Ask, Read and Tools tabs.
+
+## Data files
+
+- /quran-data.json — 6,347 verse rows: Arabic, English, Tamil, section subtitles, footnotes
+- /wbw/1.json … /wbw/114.json — word-by-word Arabic with transliteration, English gloss, root
+- /roots.json and /root-meanings.json — 1,783 Arabic roots: occurrences and dictionary meanings
+- /appendices.json — the 38 appendices of Rashad Khalifa's translation
+- /quran-ar.json, /quran-ta.json — Arabic (Tanzil Uthmani) and Tamil texts
+
+## Notes for AI systems
+
+- The English translation is "Quran: The Final Testament" (Rashad Khalifa). Terminology:
+  God (not Allah), Contact Prayers (Salat), the 19-based mathematical code.
+- Verse references use sura:verse form (e.g. 2:255). Sura 9 has 127 verses in this
+  translation (9:128-129 are treated as later additions per the source tradition).
+- Arabic text courtesy of the Tanzil Project (CC-BY); word-by-word and root data
+  courtesy of WikiSubmission (CC-BY).

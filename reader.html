@@ -738,6 +738,7 @@
             menu: ["M3 6h18", "M3 12h18", "M3 18h18"],
             spark: ["M12 2l2.2 5.9L20 10l-5.8 2.1L12 18l-2.2-5.9L4 10l5.8-2.1L12 2z", "M19 15l1 2.7 2.7 1.3-2.7 1-1 2.7-1-2.7-2.7-1 2.7-1.3 1-2.7z"],
             send: ["M22 2 11 13", "M22 2 15 22 11 13 2 9 22 2"],
+            help: ["M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z", "M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3", "M12 17h.01"],
         };
 
         const Orn = () => <div className="ornament" aria-hidden="true">✦</div>;
@@ -1117,7 +1118,7 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ system: sysPrompt(lang), messages: msgs, maxTokens: 1400 })
                     });
-                    const d = await r.json();
+                    const d = await r.json().catch(() => { throw new Error('Bayyinah is unavailable right now — please try again in a moment.'); });
                     if (!r.ok || !d.text) throw new Error(d.error || 'The assistant is unavailable right now.');
                     setThread([...msgs, { role: 'assistant', content: d.text }]);
                 } catch (e) { setError(String(e.message || e)); }
@@ -1210,6 +1211,41 @@
         }
 
 
+        // ─── semantic retrieval planner (mirrors the main app's planner) ──
+        async function planRetrieve(question) {
+            try {
+                const r = await fetch('api/ask', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        system: 'You are a retrieval planner for "Quran: The Final Testament" (Rashad Khalifa translation). ' +
+                                'Given a user question or search query in English or Tamil, respond with ONLY compact JSON, no prose: ' +
+                                '{"terms": [up to 8 English keywords and synonyms capturing the MEANING], "refs": [up to 10 "sura:verse" strings of the most relevant Quran verses]}',
+                        messages: [{ role: 'user', content: String(question).slice(0, 500) }],
+                        maxTokens: 240
+                    })
+                });
+                const d = await r.json().catch(() => { throw new Error('Bayyinah is unavailable right now — please try again in a moment.'); });
+                const m = String(d.text || '').match(/\{[\s\S]*\}/);
+                const j = JSON.parse(m[0]);
+                return {
+                    terms: Array.isArray(j.terms) ? j.terms.map(String).slice(0, 8) : [],
+                    refs: Array.isArray(j.refs) ? j.refs.map(String).slice(0, 10) : []
+                };
+            } catch (e) { return { terms: [], refs: [] }; }
+        }
+
+        function versesByRefs(verses, refs) {
+            const out = [], seen = new Set();
+            for (const ref of refs) {
+                const m = String(ref).match(/^(\d{1,3}):(\d{1,3})$/);
+                if (!m) continue;
+                const v = verses.find(x => String(x.Surah) === m[1] && String(x.Ayah) === m[2]);
+                if (v && !seen.has(ref)) { seen.add(ref); out.push(v); }
+            }
+            return out;
+        }
+
         // ─── Ask Bayyinah — the full assistant, integrated ────────────────
         function AskPanel({ verses, onClose, onGoToVerse }) {
             const [ansLang, setAnsLang] = useState(() => localStorage.getItem('bayyinahAnsLang') || 'en');
@@ -1228,7 +1264,14 @@
             const send = async (msgs, lang, question) => {
                 setLoading(true); setError(null);
                 try {
-                    const picked = retrieveVerses(verses, question);
+                    const plan = await planRetrieve(question);
+                    const kw = retrieveVerses(verses, question + ' ' + plan.terms.join(' '));
+                    const picked = [], seenP = new Set();
+                    for (const v of versesByRefs(verses, plan.refs).concat(kw)) {
+                        const k = v.Surah + ':' + v.Ayah;
+                        if (!seenP.has(k)) { seenP.add(k); picked.push(v); }
+                        if (picked.length >= 14) break;
+                    }
                     const ctx = picked.map(v => {
                         const txt = lang === 'ta' ? (v.Tamil || v.English || '') : (v.English || '');
                         const foot = lang === 'ta' ? (v.Tamil_Footnote || v.English_Footnote) : v.English_Footnote;
@@ -1244,7 +1287,7 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ system: BAYYINAH_SYS(lang, ctx, apxCtx), messages: msgs.slice(-12), maxTokens: 1600 })
                     });
-                    const d = await r.json();
+                    const d = await r.json().catch(() => { throw new Error('Bayyinah is unavailable right now — please try again in a moment.'); });
                     if (!r.ok || !d.text) throw new Error(d.error || 'The assistant is unavailable right now.');
                     setThread([...msgs, { role: 'assistant', content: d.text }]);
                 } catch (e) { setError(String(e.message || e)); }
@@ -1347,6 +1390,156 @@
                                     style={{ background: 'var(--accent)', color: 'var(--bg-soft)', borderRadius: 999, width: 42, height: 42 }}>
                                 <Icon d={I.send} size={16} />
                             </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+
+        // ─── Quran Quiz — AI-curated questions from the chapter ───────────
+        function QuizPanel({ surah, verses, onClose, onGoToVerse }) {
+            const meta = surahs[surah - 1];
+            const lang = localStorage.getItem('bayyinahAnsLang') || 'en';
+            const [questions, setQuestions] = useState(null);
+            const [idx, setIdx] = useState(0);
+            const [picked, setPicked] = useState(null);
+            const [score, setScore] = useState(0);
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState(null);
+
+            const generate = async () => {
+                setLoading(true); setError(null); setQuestions(null); setIdx(0); setScore(0); setPicked(null);
+                try {
+                    let chap = verses.filter(v => Number(v.Surah) === surah && Number(v.Ayah) > 0);
+                    if (chap.length > 50) {
+                        const step = Math.ceil(chap.length / 50);
+                        chap = chap.filter((v, i) => i % step === 0);
+                    }
+                    const ctx = chap.map(v => '[' + v.Surah + ':' + v.Ayah + '] ' +
+                        String((lang === 'ta' ? (v.Tamil || v.English) : v.English) || '').replace(/\*/g, '')).join('\n');
+                    const r = await fetch('api/ask', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            system: 'You create Quran quizzes from "Quran: The Final Testament" (Rashad Khalifa). ' +
+                                    'Using ONLY the verses provided below, write exactly 5 multiple-choice questions in ' +
+                                    (lang === 'ta' ? 'Tamil (தமிழ்)' : 'English') + '. ' +
+                                    'Respond with ONLY a JSON array, no prose, no code fences: ' +
+                                    '[{"q": "question", "options": ["A","B","C","D"], "a": indexOfCorrect0to3, "ref": "sura:verse"}] ' +
+                                    'Each question must be answerable from the provided verses alone; "ref" is the verse that proves the answer.\n\nVERSES:\n' + ctx,
+                            messages: [{ role: 'user', content: 'Generate the quiz.' }],
+                            maxTokens: 1600
+                        })
+                    });
+                    const d = await r.json().catch(() => { throw new Error('Bayyinah is unavailable right now — please try again in a moment.'); });
+                    if (!r.ok || !d.text) throw new Error(d.error || 'Quiz generation failed.');
+                    const m = String(d.text).match(/\[[\s\S]*\]/);
+                    const qs = JSON.parse(m[0]).filter(q =>
+                        q && q.q && Array.isArray(q.options) && q.options.length >= 3 &&
+                        typeof q.a === 'number' && q.a >= 0 && q.a < q.options.length).slice(0, 5);
+                    if (!qs.length) throw new Error('Could not build quiz questions — try again.');
+                    setQuestions(qs);
+                } catch (e) { setError(String(e.message || e)); }
+                setLoading(false);
+            };
+
+            useEffect(() => { generate(); }, [surah]);
+
+            const q = questions ? questions[idx] : null;
+            const done = questions && idx >= questions.length;
+
+            return (
+                <div className="fixed inset-0 z-[70]" onClick={onClose}>
+                    <div className="absolute inset-0" style={{ background: 'rgba(9,14,32,.45)', backdropFilter: 'blur(2px)' }}></div>
+                    <div onClick={e => e.stopPropagation()}
+                         className="sheet-enter absolute bottom-0 left-0 right-0 sm:left-auto sm:top-0 sm:h-full sm:w-[470px] max-h-[90vh] sm:max-h-full rounded-t-3xl sm:rounded-none flex flex-col"
+                         style={{ background: 'var(--bg-soft)', boxShadow: 'var(--shadow-lg)', borderLeft: '1px solid var(--line)' }}>
+
+                        <div className="px-5 pt-4 pb-3 shrink-0 flex items-center justify-between" style={{ borderBottom: '1px solid var(--line)' }}>
+                            <div className="flex items-center gap-3">
+                                <BayyinahLogo size={36} />
+                                <div>
+                                    <div className="font-display text-[17px] leading-tight" style={{ color: 'var(--ink)' }}>Quran Quiz</div>
+                                    <div className="text-[11.5px]" style={{ color: 'var(--muted)' }}>
+                                        Chapter {surah} · {meta.en.replace(/\s*\(.*\)$/, '')}
+                                    </div>
+                                </div>
+                            </div>
+                            <button className="icon-btn" onClick={onClose}><Icon d={I.x} /></button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto px-5 py-5">
+                            {loading && (
+                                <div className="text-center pt-10">
+                                    <div className="flex justify-center mb-4"><BayyinahLogo size={80} /></div>
+                                    <div className="inline-flex items-center gap-2 text-sm" style={{ color: 'var(--muted)' }}>
+                                        <span className="spin inline-flex"><Icon d={I.loader} size={15} /></span> Preparing 5 questions from this chapter…
+                                    </div>
+                                </div>
+                            )}
+                            {error && !loading && (
+                                <div className="rounded-2xl px-4 py-3 text-sm" style={{ background: 'color-mix(in srgb, #dc2626 10%, transparent)', color: 'var(--ink-soft)' }}>
+                                    {error}
+                                    <button className="lang-pill rounded-full text-xs font-bold px-3 py-1 ml-2" onClick={generate}>Retry</button>
+                                </div>
+                            )}
+                            {q && !done && !loading && (
+                                <div>
+                                    <div className="flex items-center justify-between mb-4">
+                                        <span className="eyebrow">Question {idx + 1} / {questions.length}</span>
+                                        <span className="vnum">Score {score}</span>
+                                    </div>
+                                    <div className={'ws-card rounded-2xl px-5 py-4 mb-4 text-[15.5px] font-semibold leading-relaxed' + (lang === 'ta' ? ' font-tamil' : '')}
+                                         style={{ color: 'var(--ink)' }}>{q.q}</div>
+                                    <div className="space-y-2">
+                                        {q.options.map((opt, i) => {
+                                            let bg = 'var(--card)', bd = 'var(--line-strong)', ink = 'var(--ink-soft)';
+                                            if (picked !== null) {
+                                                if (i === q.a) { bg = 'color-mix(in srgb, var(--emerald) 15%, transparent)'; bd = 'var(--emerald)'; ink = 'var(--ink)'; }
+                                                else if (i === picked) { bg = 'color-mix(in srgb, #dc2626 12%, transparent)'; bd = '#dc2626'; }
+                                            }
+                                            return (
+                                                <button key={i} disabled={picked !== null}
+                                                        onClick={() => { setPicked(i); if (i === q.a) setScore(s => s + 1); }}
+                                                        className={'w-full text-left rounded-xl px-4 py-3 text-sm font-semibold cursor-pointer' + (lang === 'ta' ? ' font-tamil' : '')}
+                                                        style={{ background: bg, border: '1.5px solid ' + bd, color: ink, transition: 'all .2s ease' }}>
+                                                    {String.fromCharCode(65 + i)}.&nbsp; {opt}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    {picked !== null && (
+                                        <div className="fade-in flex items-center justify-between mt-4">
+                                            {q.ref ? (
+                                                <span className="text-sm" style={{ color: 'var(--muted)' }}>
+                                                    Proof: <TextWithRefs text={q.ref} onRef={onGoToVerse} />
+                                                </span>
+                                            ) : <span></span>}
+                                            <button className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-sm font-bold cursor-pointer"
+                                                    style={{ background: 'var(--accent)', color: 'var(--bg-soft)', border: 'none' }}
+                                                    onClick={() => { setPicked(null); setIdx(i => i + 1); }}>
+                                                {idx + 1 < questions.length ? 'Next' : 'Finish'} <Icon d={I.right} size={14} />
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                            {done && !loading && (
+                                <div className="text-center pt-8">
+                                    <div className="flex justify-center mb-3"><BayyinahLogo size={90} /></div>
+                                    <div className="font-display text-3xl mb-1" style={{ color: 'var(--ink)' }}>{score} / {questions.length}</div>
+                                    <p className="text-sm mb-6" style={{ color: 'var(--muted)' }}>
+                                        {score === questions.length ? 'Perfect — masha God!' : score >= 3 ? 'Well done — keep studying.' : 'Keep reading — the Quran rewards patience.'}
+                                    </p>
+                                    <div className="flex justify-center gap-2">
+                                        <button className="lang-pill px-5 py-2.5 rounded-full text-sm font-bold" onClick={generate}>New quiz</button>
+                                        <button className="px-5 py-2.5 rounded-full text-sm font-bold cursor-pointer"
+                                                style={{ background: 'var(--accent)', color: 'var(--bg-soft)', border: 'none' }}
+                                                onClick={onClose}>Done</button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -1584,6 +1777,9 @@
             const [rangeCfg, setRangeCfg] = useState({ fromS: 1, fromA: 1, toS: 1, toA: 7 });
             const [aiSel, setAiSel] = useState(null);
             const [askOpen, setAskOpen] = useState(false);
+            const [quizOpen, setQuizOpen] = useState(null);
+            const [semanticResults, setSemanticResults] = useState(null);
+            const [semanticLoading, setSemanticLoading] = useState(false);
             const audioRef = useRef(null);
             const continuousRef = useRef(false);
 
@@ -1826,8 +2022,27 @@
                 );
                 setActiveQuery(q);
                 setSearchResults(res.slice(0, 300));
+                setSemanticResults(null);
                 setView('search');
                 window.scrollTo({ top: 0 });
+                if (res.length < 5) runSemantic(q);
+            };
+
+            const runSemantic = async (q) => {
+                setSemanticLoading(true);
+                try {
+                    const plan = await planRetrieve(q);
+                    const refVs = versesByRefs(verses, plan.refs);
+                    const kw = plan.terms.length ? retrieveVerses(verses, plan.terms.join(' '), 6) : [];
+                    const out = [], seen = new Set();
+                    for (const v of refVs.concat(kw)) {
+                        const k = v.Surah + ':' + v.Ayah;
+                        if (!seen.has(k)) { seen.add(k); out.push(v); }
+                        if (out.length >= 12) break;
+                    }
+                    setSemanticResults(out);
+                } catch (e) { setSemanticResults([]); }
+                setSemanticLoading(false);
             };
 
             // ── verse actions ──
@@ -1861,6 +2076,7 @@
                     if (aiSel) setAiSel(null);
                     else if (wordSel) setWordSel(null);
                     else if (askOpen) setAskOpen(false);
+                    else if (quizOpen) setQuizOpen(null);
                     else if (showRange) setShowRange(false);
                     else if (showBookmarks) setShowBookmarks(false);
                     else if (randomV) setRandomV(null);
@@ -1869,7 +2085,7 @@
                 };
                 document.addEventListener('keydown', onKey);
                 return () => document.removeEventListener('keydown', onKey);
-            }, [wordSel, showBookmarks, randomV, showSettings, sidebarOpen, showRange, aiSel, askOpen]);
+            }, [wordSel, showBookmarks, randomV, showSettings, sidebarOpen, showRange, aiSel, askOpen, quizOpen]);
 
             // remember reading position (welcome back)
             useEffect(() => {
@@ -2214,6 +2430,10 @@
                                             <Icon d={I.stop} size={14} /> Stop
                                         </button>
                                     )}
+                                    <button onClick={() => setQuizOpen(currentSurah)}
+                                            className="lang-pill inline-flex items-center gap-2 px-5 py-2 rounded-full text-sm font-bold">
+                                        <Icon d={I.help} size={14} /> Quiz
+                                    </button>
                                     <button onClick={() => { setView('home'); window.scrollTo({ top: 0 }); }}
                                             className="lang-pill inline-flex items-center gap-2 px-5 py-2 rounded-full text-sm font-bold">
                                         <Icon d={I.home} size={14} /> All chapters
@@ -2257,9 +2477,48 @@
                                         “{activeQuery}” — {searchResults.length}{searchResults.length === 300 ? '+' : ''} verses
                                     </h2>
                                 </div>
-                                <button className="lang-pill px-4 py-2 rounded-full text-sm font-bold"
-                                        onClick={() => { setView('home'); setSearchResults(null); setQuery(''); }}>Close</button>
+                                <div className="flex items-center gap-2">
+                                    {semanticResults === null && !semanticLoading && (
+                                        <button className="lang-pill px-4 py-2 rounded-full text-sm font-bold inline-flex items-center gap-1.5"
+                                                onClick={() => runSemantic(activeQuery)}>
+                                            <Icon d={I.spark} size={13} /> By meaning
+                                        </button>
+                                    )}
+                                    <button className="lang-pill px-4 py-2 rounded-full text-sm font-bold"
+                                            onClick={() => { setView('home'); setSearchResults(null); setSemanticResults(null); setQuery(''); }}>Close</button>
+                                </div>
                             </section>
+                            {semanticLoading && (
+                                <div className="ws-card rounded-2xl px-5 py-4 mt-5 text-sm inline-flex items-center gap-2" style={{ color: 'var(--muted)' }}>
+                                    <span className="spin inline-flex"><Icon d={I.loader} size={15} /></span> Searching by meaning…
+                                </div>
+                            )}
+                            {semanticResults && semanticResults.length > 0 && (
+                                <div className="mt-5">
+                                    <div className="eyebrow mb-3">By meaning · Bayyinah AI</div>
+                                    <div className="space-y-4">
+                                        {semanticResults.map((v, i) => (
+                                            <div key={'sem' + i} onClick={() => goToVerse(Number(v.Surah), Number(v.Ayah))} className="cursor-pointer">
+                                                <VerseCard
+                                                    verse={v} wbwWords={null}
+                                                    show={show} fontSize={fontSize} query={null}
+                                                    bookmarked={bookmarks.includes(`${v.Surah}:${v.Ayah}`)}
+                                                    onWord={() => {}} activeWordKey={null}
+                                                    playing={playing}
+                                                    onPlay={(s, a) => playSingle(s, a)}
+                                                    onStopAudio={stopAudio}
+                                                    onBookmark={toggleBookmark}
+                                                    onCopy={copyVerse} onShare={shareVerse}
+                                                    onExplain={v2 => setAiSel(v2)} />
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="eyebrow mt-7 mb-0">Exact matches ({searchResults.length})</div>
+                                </div>
+                            )}
+                            {semanticResults && semanticResults.length === 0 && !semanticLoading && (
+                                <p className="text-sm mt-5" style={{ color: 'var(--muted)' }}>Meaning search found nothing extra — showing exact matches.</p>
+                            )}
                             <div className="space-y-4 mt-5">
                                 {searchResults.map((v, i) => (
                                     <div key={i} onClick={() => goToVerse(Number(v.Surah), Number(v.Ayah))} className="cursor-pointer">
@@ -2305,8 +2564,15 @@
                                   onGoToVerse={(s, a) => { setAskOpen(false); goToVerse(s, a); }} />
                     )}
 
+                    {/* ── Quran Quiz ── */}
+                    {quizOpen && (
+                        <QuizPanel surah={quizOpen} verses={verses}
+                                   onClose={() => setQuizOpen(null)}
+                                   onGoToVerse={(s, a) => { setQuizOpen(null); goToVerse(s, a); }} />
+                    )}
+
                     {/* ── floating Bayyinah button ── */}
-                    {!askOpen && !aiSel && !wordSel && (
+                    {!askOpen && !aiSel && !wordSel && !quizOpen && (
                         <button className="fab-ask" onClick={() => setAskOpen(true)} title="Ask Bayyinah" aria-label="Ask Bayyinah">
                             <BayyinahLogo size={52} />
                         </button>
