@@ -1471,7 +1471,8 @@
         // ─── Quran Quiz — AI-curated questions from the chapter ───────────
         function QuizPanel({ surah, verses, onClose, onGoToVerse }) {
             const meta = surahs[surah - 1];
-            const lang = localStorage.getItem('bayyinahAnsLang') || 'en';
+            const [lang, setLang] = useState(() => localStorage.getItem('bayyinahAnsLang') || 'en');
+            useEffect(() => { localStorage.setItem('bayyinahAnsLang', lang); }, [lang]);
             const [questions, setQuestions] = useState(null);
             const [idx, setIdx] = useState(0);
             const [picked, setPicked] = useState(null);
@@ -1517,7 +1518,7 @@
                 setLoading(false);
             };
 
-            useEffect(() => { generate(); }, [surah]);
+            useEffect(() => { generate(); }, [surah, lang]);
 
             const q = questions ? questions[idx] : null;
             const done = questions && idx >= questions.length;
@@ -1529,17 +1530,28 @@
                          className="sheet-enter absolute bottom-0 left-0 right-0 sm:left-auto sm:top-0 sm:h-full sm:w-[470px] max-h-[90vh] sm:max-h-full rounded-t-3xl sm:rounded-none flex flex-col"
                          style={{ background: 'var(--bg-soft)', boxShadow: 'var(--shadow-lg)', borderLeft: '1px solid var(--line)' }}>
 
-                        <div className="px-5 pt-4 pb-3 shrink-0 flex items-center justify-between" style={{ borderBottom: '1px solid var(--line)' }}>
-                            <div className="flex items-center gap-3">
-                                <BayyinahLogo size={36} />
-                                <div>
-                                    <div className="font-display text-[17px] leading-tight" style={{ color: 'var(--ink)' }}>Quran Quiz</div>
-                                    <div className="text-[11.5px]" style={{ color: 'var(--muted)' }}>
-                                        Chapter {surah} · {meta.en.replace(/\s*\(.*\)$/, '')}
+                        <div className="px-5 pt-4 pb-3 shrink-0" style={{ borderBottom: '1px solid var(--line)' }}>
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <BayyinahLogo size={36} />
+                                    <div>
+                                        <div className="font-display text-[17px] leading-tight" style={{ color: 'var(--ink)' }}>Quran Quiz</div>
+                                        <div className="text-[11.5px]" style={{ color: 'var(--muted)' }}>
+                                            Chapter {surah} · {meta.en.replace(/\s*\(.*\)$/, '')}
+                                        </div>
                                     </div>
                                 </div>
+                                <button className="icon-btn" onClick={onClose}><Icon d={I.x} /></button>
                             </div>
-                            <button className="icon-btn" onClick={onClose}><Icon d={I.x} /></button>
+                            <div className="flex items-center gap-1.5 mt-3">
+                                {[['en', 'English'], ['ta', 'தமிழ்']].map(([k, label]) => (
+                                    <button key={k} onClick={() => setLang(k)} disabled={loading}
+                                            className={'lang-pill rounded-full font-bold text-xs px-3 py-1.5 ' + (lang === k ? 'on' : '') + (k === 'ta' ? ' font-tamil' : '')}>
+                                        {label}
+                                    </button>
+                                ))}
+                                <span className="text-[11px] ml-auto" style={{ color: 'var(--muted)' }}>questions from this chapter</span>
+                            </div>
                         </div>
 
                         <div className="flex-1 overflow-y-auto px-5 py-5">
