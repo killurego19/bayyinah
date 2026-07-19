@@ -7,13 +7,13 @@
 
 ## Pages
 
-- [Full Reader](https://bayyinah-chi.vercel.app/reader.html): all 114 chapters with
+- [Full Reader](https://bayyinah-chi.vercel.app/): all 114 chapters with
   Verse / Word / Reading view modes; clickable Arabic words showing transliteration,
   meaning, root, root-dictionary entries and every occurrence of the root; English and
   Tamil translations with subtitles and footnotes; Qari recitation plus English and
   Tamil reading voices with range playback; search; the Ask Bayyinah AI assistant and
   per-verse AI explanations with tappable verse citations.
-- [Assistant](https://bayyinah-chi.vercel.app/): the Bayyinah chat assistant with
+- [Assistant](https://bayyinah-chi.vercel.app/assistant.html): the Bayyinah chat assistant with
   Ask, Read and Tools tabs.
 
 ## Data files
