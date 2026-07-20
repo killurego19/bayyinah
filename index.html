@@ -954,6 +954,10 @@
         const audioVerseNumber = (s, a) => {
             let n = 0;
             for (let i = 1; i < s; i++) n += VERSE_COUNTS[i - 1];
+            // The audio CDN numbers verses per the standard 6,236-verse Hafs text, which
+            // includes 9:128-129 — excluded from this translation (Appendix 24). Skip them
+            // so audio and text stay aligned from Sura 10 onward; those two files never play.
+            if (s > 9) n += 2;
             return n + a;
         };
         const qariUrl = (s, a) => `https://cdn.islamic.network/quran/audio/128/ar.alafasy/${audioVerseNumber(s, a)}.mp3`;
