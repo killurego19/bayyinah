@@ -1660,8 +1660,8 @@
                              activeWordKey, isCurrentInContinuous, mode = 'verse', onExplain }) {
             const s = Number(verse.Surah), a = Number(verse.Ayah);
             const isBasmalah = a === 0;
-            const arSizes = { small: 26, medium: 32, large: 40 };
-            const trSizes = { small: 'text-sm', medium: 'text-[16px]', large: 'text-lg' };
+            const arSizes = { small: 26, medium: 32, large: 40, xl: 48, xxl: 58 };
+            const trSizes = { small: 'text-sm', medium: 'text-[16px]', large: 'text-lg', xl: 'text-[20px]', xxl: 'text-[23px]' };
             const hasFootnote = verse.English_Footnote || verse.Tamil_Footnote;
             const [openFootnote, setOpenFootnote] = useState(mode === 'word' && !!hasFootnote);
             useEffect(() => { setOpenFootnote(mode === 'word' && !!hasFootnote); }, [mode]);
@@ -1779,8 +1779,8 @@
 
         // ─── Reading (book-flow) view ─────────────────────────────────────
         function ReadingView({ list, wbw, show, fontSize, onWord }) {
-            const arSizes = { small: 25, medium: 31, large: 39 };
-            const trSizes = { small: 'text-[15px]', medium: 'text-[17px]', large: 'text-[19px]' };
+            const arSizes = { small: 25, medium: 31, large: 39, xl: 47, xxl: 56 };
+            const trSizes = { small: 'text-[15px]', medium: 'text-[17px]', large: 'text-[19px]', xl: 'text-[21px]', xxl: 'text-[24px]' };
             return (
                 <div className="ws-card rounded-2xl px-6 sm:px-10 py-8 space-y-8">
                     {show.ar && (
@@ -2464,15 +2464,9 @@
                                     The Final Testament
                                 </h1>
                                 <Orn />
-                                <p className="mt-0 mb-3 text-[15px]" style={{ color: 'var(--muted)' }}>
-                                    Authorized English Version — translated by Rashad Khalifa, Ph.D. · with Tamil translation
+                                <p className="mt-0 mb-6 text-[15px]" style={{ color: 'var(--muted)' }}>
+                                    Arabic · English · Tamil · <span className="text-[13px]">(Hindi translation coming soon — InshaAllah)</span>
                                 </p>
-                                <div className="mb-6">
-                                    <span className="inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-full"
-                                          style={{ background: 'color-mix(in srgb, var(--gold) 13%, transparent)', color: 'var(--accent-deep)', border: '1px solid color-mix(in srgb, var(--gold) 45%, transparent)' }}>
-                                        ✦ हिन्दी — Hindi translation coming soon
-                                    </span>
-                                </div>
 
                                 {/* Search */}
                                 <div className="max-w-xl mx-auto relative">
@@ -2486,33 +2480,6 @@
                                     />
                                 </div>
 
-                                {/* Books row */}
-                                <div className="grid sm:grid-cols-2 gap-3 mt-9 text-left">
-                                    <button onClick={() => openDoc('proclamation')}
-                                            className="ws-card ws-card-hover rounded-2xl px-5 py-4 flex items-start justify-between gap-3 text-left w-full cursor-pointer">
-                                        <div>
-                                            <div className="flex items-center gap-2 font-bold text-[15px]" style={{ color: 'var(--ink)' }}>
-                                                <span style={{ color: 'var(--accent)' }}><Icon d={I.book} size={17} /></span> Proclamation
-                                            </div>
-                                            <div className="text-[13px] mt-1 leading-snug" style={{ color: 'var(--muted)' }}>
-                                                Proclaiming One Unified Religion for All the People — Rashad Khalifa, 1989
-                                            </div>
-                                        </div>
-                                        <span className="mt-1 shrink-0" style={{ color: 'var(--muted)' }}><Icon d={I.arrowR} size={16} /></span>
-                                    </button>
-                                    <button onClick={() => openDoc('introduction')}
-                                            className="ws-card ws-card-hover rounded-2xl px-5 py-4 flex items-start justify-between gap-3 text-left w-full cursor-pointer">
-                                        <div>
-                                            <div className="flex items-center gap-2 font-bold text-[15px]" style={{ color: 'var(--ink)' }}>
-                                                <span style={{ color: 'var(--accent)' }}><Icon d={I.book} size={17} /></span> Introduction
-                                            </div>
-                                            <div className="text-[13px] mt-1 leading-snug" style={{ color: 'var(--muted)' }}>
-                                                An introduction to the Final Testament and its mathematical miracle
-                                            </div>
-                                        </div>
-                                        <span className="mt-1 shrink-0" style={{ color: 'var(--muted)' }}><Icon d={I.arrowR} size={16} /></span>
-                                    </button>
-                                </div>
 
                                 <div className="mt-6">
                                     <button onClick={() => setAskOpen(true)}
@@ -2878,7 +2845,7 @@
 
                                 <div className="eyebrow mb-2">Text size</div>
                                 <div className="seg mb-5">
-                                    {[['small', 'Small'], ['medium', 'Medium'], ['large', 'Large']].map(([k, label]) => (
+                                    {[['small', 'S'], ['medium', 'M'], ['large', 'L'], ['xl', 'XL'], ['xxl', 'XXL']].map(([k, label]) => (
                                         <button key={k} className={fontSize === k ? 'on' : ''} onClick={() => setFontSize(k)}>{label}</button>
                                     ))}
                                 </div>
