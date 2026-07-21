@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bayyinah · Quran — The Final Testament</title>
+    <title>Bayyinah — Quran AI</title>
 
     <!-- PWA -->
     <link rel="manifest" href="manifest.webmanifest">
@@ -32,7 +32,7 @@
                 extend: {
                     fontFamily: {
                         display: ['Marcellus', 'Georgia', 'serif'],
-                        tamil: ['"Noto Serif Tamil"', 'serif'],
+                        tamil: ['"Noto Sans Tamil"', 'sans-serif'],
                     }
                 }
             }
@@ -47,7 +47,7 @@
     <script src="https://unpkg.com/@babel/standalone@7.25.6/babel.min.js"></script>
 
     <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Spectral:wght@400;500;600&family=Noto+Serif+Tamil:wght@400;600;700&family=Scheherazade+New:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Inter:wght@400;500;600;700&family=Noto+Sans+Tamil:wght@400;500;600;700&family=Scheherazade+New:wght@400;700&display=swap" rel="stylesheet">
 
     <style>
         @font-face {
@@ -227,7 +227,7 @@
             margin: 0;
             background: var(--bg);
             color: var(--ink);
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             transition: background-color .35s ease, color .35s ease;
         }
 
@@ -244,7 +244,7 @@
         }
 
         .verse-en {
-            font-family: 'Spectral', Georgia, serif;
+            font-family: 'Inter', -apple-system, sans-serif;
             letter-spacing: .1px;
         }
 
@@ -464,6 +464,10 @@
             100% { transform: scale(1.28); opacity: 0; }
         }
         @media (prefers-reduced-motion: reduce) { .fab-ask::after { animation: none; opacity: 0; } }
+        @media (max-width: 640px) {
+            .fab-ask { width: 54px; height: 54px; right: 16px; bottom: 16px; }
+            .fab-ask canvas { width: 42px !important; height: 42px !important; }
+        }
 
         .chip-q {
             border: 1px solid var(--line-strong);
@@ -724,6 +728,7 @@
         const VERSE_COUNTS = surahs.map(s => s.verses);
 
         const { useState, useEffect, useRef, useMemo, useCallback } = React;
+        window.__canHover = !!(window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches);
 
         // ─── tiny icon set (inline SVG) ───────────────────────────────────
         const Icon = ({ d, size = 18, sw = 2, ...p }) => (
@@ -850,10 +855,16 @@
             const parts = String(text || '').split(/(\b\d{1,3}:\d{1,3}\b)/g);
             return <>{parts.map((part, i) => {
                 const m = part.match(/^(\d{1,3}):(\d{1,3})$/);
-                if (m && onRef) {
+                if (m) {
                     const s = Number(m[1]), a = Number(m[2]);
                     if (s >= 1 && s <= 114 && a >= 0 && a <= VERSE_COUNTS[s - 1]) {
-                        return <span key={i} className="ref-link" title={'Open verse ' + part} onClick={() => onRef(s, a)}>{part}</span>;
+                        return <span key={i} className="ref-link" title={'Verse ' + part}
+                                     onMouseEnter={() => { if (window.__canHover) { clearTimeout(window.__refT); window.__refT = setTimeout(() => window.__openRefPop && window.__openRefPop(s, a), 350); } }}
+                                     onMouseLeave={() => clearTimeout(window.__refT)}
+                                     onDoubleClick={e => { e.stopPropagation(); clearTimeout(window.__refT); window.__goVerse && window.__goVerse(s, a); }}
+                                     onClick={e => { e.stopPropagation(); clearTimeout(window.__refT);
+                                         if (window.__canHover) { window.__goVerse && window.__goVerse(s, a); }
+                                         else { window.__openRefPop && window.__openRefPop(s, a); } }}>{part}</span>;
                     }
                 }
                 return <React.Fragment key={i}>{part}</React.Fragment>;
@@ -862,16 +873,22 @@
 
 
         // linkify Quran refs in documents — but not Bible refs (Malachi 3:1 etc.)
-        function DocText({ text, onRef }) {
+        function DocText({ text }) {
             const parts = String(text || '').split(/(\b\d{1,3}:\d{1,3}\b)/g);
             return <>{parts.map((part, i) => {
                 const m = part.match(/^(\d{1,3}):(\d{1,3})$/);
-                if (m && onRef) {
+                if (m) {
                     const prev = parts.slice(0, i).join('');
                     const biblical = /(Deuteronomy|Malachi|Matthew|Luke|Mark|John|Genesis|Veda)[\s(]*$/i.test(prev);
                     const s = Number(m[1]), a = Number(m[2]);
                     if (!biblical && s >= 1 && s <= 114 && a >= 0 && a <= VERSE_COUNTS[s - 1]) {
-                        return <span key={i} className="ref-link" title={'Open verse ' + part} onClick={() => onRef(s, a)}>{part}</span>;
+                        return <span key={i} className="ref-link" title={'Verse ' + part}
+                                     onMouseEnter={() => { if (window.__canHover) { clearTimeout(window.__refT); window.__refT = setTimeout(() => window.__openRefPop && window.__openRefPop(s, a), 350); } }}
+                                     onMouseLeave={() => clearTimeout(window.__refT)}
+                                     onDoubleClick={e => { e.stopPropagation(); clearTimeout(window.__refT); window.__goVerse && window.__goVerse(s, a); }}
+                                     onClick={e => { e.stopPropagation(); clearTimeout(window.__refT);
+                                         if (window.__canHover) { window.__goVerse && window.__goVerse(s, a); }
+                                         else { window.__openRefPop && window.__openRefPop(s, a); } }}>{part}</span>;
                     }
                 }
                 return <React.Fragment key={i}>{part}</React.Fragment>;
@@ -970,6 +987,7 @@
             if (wbwCache[surah]) return wbwCache[surah];
             const r = await fetch(`${DATA_DIR}/wbw/${surah}.json`);
             const j = await r.json();
+            for (const k in j) j[k].forEach(t => { t[0] = String(t[0]).replace(/[\u06EA\u06EB\u06EC]/g, ''); });
             wbwCache[surah] = j;
             return j;
         }
@@ -1657,21 +1675,20 @@
         // ─── Verse Card ───────────────────────────────────────────────────
         function VerseCard({ verse, wbwWords, show, fontSize, query, bookmarked,
                              onWord, playing, onPlay, onStopAudio, onBookmark, onCopy, onShare,
-                             activeWordKey, isCurrentInContinuous, mode = 'verse', onExplain }) {
+                             activeWordKey, isCurrentInContinuous, mode = 'verse', onExplain, audioWordKey }) {
             const s = Number(verse.Surah), a = Number(verse.Ayah);
             const isBasmalah = a === 0;
             const arSizes = { small: 26, medium: 32, large: 40, xl: 48, xxl: 58 };
             const trSizes = { small: 'text-sm', medium: 'text-[16px]', large: 'text-lg', xl: 'text-[20px]', xxl: 'text-[23px]' };
             const hasFootnote = verse.English_Footnote || verse.Tamil_Footnote;
-            const [openFootnote, setOpenFootnote] = useState(mode === 'word' && !!hasFootnote);
-            useEffect(() => { setOpenFootnote(mode === 'word' && !!hasFootnote); }, [mode]);
+            const [openFootnote, setOpenFootnote] = useState(false);
 
             const arabicLine = wbwWords ? (
                 <div dir="rtl" lang="ar" className={`font-arabic ${isBasmalah ? 'text-center' : 'text-right'}`}
                      style={{ fontSize: arSizes[fontSize] * (isBasmalah ? 0.9 : 1), lineHeight: 2.05, color: 'var(--ink)' }}>
                     {wbwWords.map((w, i) => (
                         <React.Fragment key={i}>
-                            <span className={`arabic-word ${activeWordKey === `${s}:${a}:${i}` ? 'active' : ''}`}
+                            <span className={`arabic-word ${(activeWordKey === `${s}:${a}:${i}` || audioWordKey === `${s}:${a}:${i}`) ? 'active' : ''}`}
                                   title={`${w[2]} (${w[1]})`}
                                   onClick={() => onWord({ surah: s, ayah: a, wordIndex: i, word: w })}>{w[0]}</span>
                             {' '}
@@ -1733,7 +1750,7 @@
                             <div dir="rtl" className={`flex flex-wrap gap-y-3 mt-5 ${isBasmalah ? 'justify-center' : ''}`}>
                                 {wbwWords.map((w, i) => (
                                     <div key={i}
-                                         className={`word-cell ${activeWordKey === `${s}:${a}:${i}` ? 'active' : ''}`}
+                                         className={`word-cell ${(activeWordKey === `${s}:${a}:${i}` || audioWordKey === `${s}:${a}:${i}`) ? 'active' : ''}`}
                                          title={w[1]}
                                          onClick={() => onWord({ surah: s, ayah: a, wordIndex: i, word: w })}>
                                         <div className="font-arabic" lang="ar" style={{ fontSize: arSizes[fontSize], lineHeight: 1.7, color: 'var(--ink)' }}>{w[0]}</div>
@@ -1744,13 +1761,7 @@
                         ) : show.ar && arabicLine
                     )}
 
-                    {hasFootnote && mode === 'word' && openFootnote && (
-                        <div className="mt-4 text-[13.5px] italic leading-relaxed space-y-2" style={{ color: 'var(--muted)' }}>
-                            {show.en !== false && verse.English_Footnote && <p className="m-0 whitespace-pre-line verse-en">{String(verse.English_Footnote).replace(/^\*/, '± ')}</p>}
-                            {show.ta && verse.Tamil_Footnote && <p className="m-0 whitespace-pre-line font-tamil not-italic">{String(verse.Tamil_Footnote).replace(/^\*/, '± ')}</p>}
-                        </div>
-                    )}
-                    {hasFootnote && mode !== 'word' && (
+                    {hasFootnote && (
                         <div className="mt-3">
                             {!openFootnote ? (
                                 <button onClick={() => setOpenFootnote(true)}
@@ -1763,14 +1774,34 @@
                                      style={{ background: 'color-mix(in srgb, var(--emerald) 7%, transparent)', border: '1px solid color-mix(in srgb, var(--emerald) 25%, transparent)' }}>
                                     <div className="flex justify-between items-start gap-2">
                                         <div className="space-y-2" style={{ color: 'var(--ink-soft)' }}>
-                                            {show.en && verse.English_Footnote && <p className="m-0 whitespace-pre-line">{verse.English_Footnote}</p>}
-                                            {show.ta && verse.Tamil_Footnote && <p className="m-0 font-tamil whitespace-pre-line">{verse.Tamil_Footnote}</p>}
-                                            {!show.en && !show.ta && verse.English_Footnote && <p className="m-0 whitespace-pre-line">{verse.English_Footnote}</p>}
+                                            {show.en && verse.English_Footnote && <p className="m-0 whitespace-pre-line"><DocText text={verse.English_Footnote} /></p>}
+                                            {show.ta && verse.Tamil_Footnote && <p className="m-0 font-tamil whitespace-pre-line"><DocText text={verse.Tamil_Footnote} /></p>}
+                                            {!show.en && !show.ta && verse.English_Footnote && <p className="m-0 whitespace-pre-line"><DocText text={verse.English_Footnote} /></p>}
                                         </div>
                                         <button className="icon-btn" style={{ width: 26, height: 26 }} onClick={() => setOpenFootnote(false)}><Icon d={I.x} size={14} /></button>
                                     </div>
                                 </div>
                             )}
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+
+        // ─── collapsible endnote for Reading mode ─────────────────────────
+        function EndNote({ v, show }) {
+            const [open, setOpen] = useState(false);
+            return (
+                <div className="text-[13.5px] leading-relaxed">
+                    <button onClick={() => setOpen(o => !o)} className="lang-pill rounded-full text-[11.5px] font-bold px-3 py-1 cursor-pointer">
+                        ± {v.Surah}:{v.Ayah} — footnote {open ? '▾' : '▸'}
+                    </button>
+                    {open && (
+                        <div className="fade-in mt-2 space-y-1.5 italic" style={{ color: 'var(--muted)' }}>
+                            {show.en && v.English_Footnote && <p className="m-0 whitespace-pre-line verse-en"><DocText text={String(v.English_Footnote).replace(/^\*/, '')} /></p>}
+                            {show.ta && v.Tamil_Footnote && <p className="m-0 whitespace-pre-line font-tamil not-italic"><DocText text={String(v.Tamil_Footnote).replace(/^\*/, '')} /></p>}
+                            {!show.en && !show.ta && v.English_Footnote && <p className="m-0 whitespace-pre-line verse-en"><DocText text={String(v.English_Footnote).replace(/^\*/, '')} /></p>}
                         </div>
                     )}
                 </div>
@@ -1833,12 +1864,7 @@
                         <div style={{ borderTop: '1px solid var(--line)' }} className="pt-6">
                             <div className="eyebrow mb-3">Footnotes{show.ta ? <span className="font-tamil normal-case tracking-normal"> · அடிக்குறிப்புகள்</span> : null}</div>
                             <div className="space-y-3">
-                                {list.filter(v => v.English_Footnote || v.Tamil_Footnote).map(v => (
-                                    <div key={v.Ayah} className="text-[13.5px] italic leading-relaxed space-y-1.5" style={{ color: 'var(--muted)' }}>
-                                        {show.en && v.English_Footnote && <p className="m-0 whitespace-pre-line verse-en">{String(v.English_Footnote).replace(/^\*/, '± ')}</p>}
-                                        {show.ta && v.Tamil_Footnote && <p className="m-0 whitespace-pre-line font-tamil not-italic">{String(v.Tamil_Footnote).replace(/^\*/, '± ')}</p>}
-                                    </div>
-                                ))}
+                                {list.filter(v => v.English_Footnote || v.Tamil_Footnote).map(v => <EndNote key={v.Ayah} v={v} show={show} />)}
                             </div>
                         </div>
                     )}
@@ -1963,6 +1989,7 @@
                     try {
                         const res = await fetch('quran-data.json');
                         const data = await res.json();
+                        data.forEach(v => { if (v.Arabic) v.Arabic = String(v.Arabic).replace(/[\u06EA\u06EB\u06EC]/g, ''); });
                         setVerses(data);
                         setLoading(false);
                     } catch (e) {
@@ -1998,6 +2025,7 @@
             }, []);
 
             const ttsAudioRef = useRef(null);
+            const [audioWord, setAudioWord] = useState(null);
 
             const stopAudio = useCallback(() => {
                 playTokenRef.current++;
@@ -2006,6 +2034,7 @@
                 if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = ''; }
                 if (ttsAudioRef.current) { ttsAudioRef.current.pause(); ttsAudioRef.current.src = ''; }
                 try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) {}
+                setAudioWord(null);
                 setPlaying(null);
             }, []);
 
@@ -2055,6 +2084,12 @@
                 audio.onended = resolve;
                 audio.onerror = resolve;
                 audio.onpause = () => { if (playTokenRef.current !== token) resolve(); };
+                audio.ontimeupdate = () => {
+                    const words = wbwCache[s] && wbwCache[s][String(a)];
+                    if (!words || !audio.duration) return;
+                    const idx = Math.min(words.length - 1, Math.floor((audio.currentTime / audio.duration) * words.length));
+                    setAudioWord(s + ':' + a + ':' + idx);
+                };
                 audio.play().catch(resolve);
             });
 
@@ -2076,7 +2111,7 @@
                 setPlaying(`${s}:${a}`);
                 // read aloud in exactly the languages the user has selected in Settings
                 const langs = (show.ar || show.en || show.ta) ? show : { ar: true };
-                if (langs.ar) { await playQari(s, a, token); if (playTokenRef.current !== token) return; }
+                if (langs.ar) { await playQari(s, a, token); setAudioWord(null); if (playTokenRef.current !== token) return; }
                 if (langs.en && v && v.English) { await speak(v.English, 'en'); if (playTokenRef.current !== token) return; }
                 if (langs.ta && v && v.Tamil) {
                     try { await playProxyTTS(v.Tamil, 'ta', token); }
@@ -2158,6 +2193,7 @@
             const [docId, setDocId] = useState(null);
             const [docData, setDocData] = useState(null);
             const [docLoading, setDocLoading] = useState(false);
+            const [docLang, setDocLang] = useState('en');
             const openDoc = async (id) => {
                 setDocId(id); setDocData(null); setDocLoading(true);
                 setSearchResults(null); setWordSel(null);
@@ -2166,11 +2202,43 @@
                 if (window.innerWidth < 1024) setSidebarOpen(false);
                 try {
                     if (!window.__docCache) window.__docCache = {};
-                    if (!window.__docCache[id]) window.__docCache[id] = await (await fetch('docs/' + id + '.json')).json();
+                    if (!window.__docCache[id]) {
+                        if (id.indexOf('appendix-') === 0) {
+                            if (!window.__apxBook) window.__apxBook = await (await fetch(DATA_DIR + '/appendices.json')).json();
+                            const n = Number(id.slice(9));
+                            const a = window.__apxBook.find(x => Number(x.n) === n);
+                            window.__docCache[id] = {
+                                id: id,
+                                eyebrow: 'Appendix ' + n + ' of 38 — Rashad Khalifa',
+                                title: a.title,
+                                subtitle: '',
+                                sections: [{ items: (a.paragraphs || []).map(t => ({ t: 'p', text: t })) }]
+                            };
+                        } else {
+                            window.__docCache[id] = await (await fetch('docs/' + id + '.json')).json();
+                        }
+                    }
                     setDocData(window.__docCache[id]);
                 } catch (e) {}
                 setDocLoading(false);
             };
+
+
+            const [apxOpen, setApxOpen] = useState(false);
+            const [apxList, setApxList] = useState(null);
+            useEffect(() => {
+                if (!apxOpen || apxList) return;
+                (async () => {
+                    try {
+                        if (!window.__apxBook) window.__apxBook = await (await fetch(DATA_DIR + '/appendices.json')).json();
+                        setApxList(window.__apxBook.map(a => ({ n: a.n, title: a.title })));
+                    } catch (e) { setApxList([]); }
+                })();
+            }, [apxOpen]);
+
+            const [refPop, setRefPop] = useState(null);
+            window.__openRefPop = (s2, a2) => setRefPop({ s: s2, a: a2 });
+            window.__goVerse = (s2, a2) => { setAiSel(null); setAskOpen(false); setQuizOpen(null); setRefPop(null); goToVerse(s2, a2); };
 
             const openSurah = s => {
                 stopAudio();
@@ -2225,17 +2293,18 @@
                 setBookmarks(b => has ? b.filter(x => x !== key) : [...b, key]);
                 flash(has ? 'Bookmark removed' : 'Bookmark saved');
             };
+            const buildVerseText = v => {
+                const bits = [`[Quran ${v.Surah}:${v.Ayah}] - Bayyinah`];
+                if (show.ar && v.Arabic) bits.push('', v.Arabic);
+                if (show.en && v.English) bits.push('', String(v.English).replace(/\*/g, ''));
+                if (show.ta && v.Tamil) bits.push('', String(v.Tamil).replace(/\*/g, ''));
+                return bits.join('\n');
+            };
             const copyVerse = v => {
-                const bits = [`[${v.Surah}:${v.Ayah}]`];
-                if (show.ar && v.Arabic) bits.push(v.Arabic);
-                if (show.en && v.English) bits.push(String(v.English).replace(/\*/g, ''));
-                if (show.ta && v.Tamil) bits.push(String(v.Tamil).replace(/\*/g, ''));
-                bits.push('— Bayyinah · ' + location.origin);
-                navigator.clipboard.writeText(bits.join('\n')).then(() => flash('Verse copied'));
+                navigator.clipboard.writeText(buildVerseText(v)).then(() => flash('Verse copied'));
             };
             const shareVerse = v => {
-                const text = `[${v.Surah}:${v.Ayah}] ${String(v.English || '').replace(/\*/g, '')}\n${location.origin}/`;
-                window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+                window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(buildVerseText(v))}`, '_blank');
             };
             const showRandom = () => {
                 const pool = verses.filter(v => Number(v.Ayah) > 0);
@@ -2248,7 +2317,8 @@
             useEffect(() => {
                 const onKey = e => {
                     if (e.key !== 'Escape') return;
-                    if (aiSel) setAiSel(null);
+                    if (refPop) setRefPop(null);
+                    else if (aiSel) setAiSel(null);
                     else if (wordSel) setWordSel(null);
                     else if (askOpen) setAskOpen(false);
                     else if (quizOpen) setQuizOpen(null);
@@ -2260,7 +2330,7 @@
                 };
                 document.addEventListener('keydown', onKey);
                 return () => document.removeEventListener('keydown', onKey);
-            }, [wordSel, showBookmarks, randomV, showSettings, sidebarOpen, showRange, aiSel, askOpen, quizOpen]);
+            }, [wordSel, showBookmarks, randomV, showSettings, sidebarOpen, showRange, aiSel, askOpen, quizOpen, refPop]);
 
             // remember reading position (welcome back)
             useEffect(() => {
@@ -2351,7 +2421,7 @@
                                 <BayyinahLogo size={30} />
                                 <span className="text-left leading-tight">
                                     <span className="block text-[14.5px]">Quran · The Final Testament</span>
-                                    <span className="block text-[10.5px] font-sans font-semibold" style={{ color: 'var(--muted)' }}>Bayyinah — Quran study assistant</span>
+                                    <span className="block text-[10.5px] font-sans font-semibold" style={{ color: 'var(--muted)' }}>Bayyinah — Quran AI</span>
                                 </span>
                             </button>
                             <button className="icon-btn" onClick={() => setSidebarOpen(false)}><Icon d={I.x} /></button>
@@ -2366,6 +2436,9 @@
                             </button>
                             <button className="side-link" onClick={() => setShowBookmarks(true)}>
                                 <Icon d={I.bookmark} size={16} /> Bookmarks <span className="ml-auto" style={{ color: 'var(--muted)' }}><Icon d={I.right} size={14} /></span>
+                            </button>
+                            <button className="side-link" onClick={() => openDoc('preface')}>
+                                <Icon d={I.book} size={16} /> Preface <span className="ml-auto" style={{ color: 'var(--muted)' }}><Icon d={I.right} size={14} /></span>
                             </button>
                             <button className="side-link" onClick={() => openDoc('proclamation')}>
                                 <Icon d={I.book} size={16} /> Proclamation <span className="ml-auto" style={{ color: 'var(--muted)' }}><Icon d={I.right} size={14} /></span>
@@ -2400,6 +2473,23 @@
                                     <span className="text-[11px] font-semibold shrink-0" style={{ color: 'var(--muted)' }}>{su.verses}v</span>
                                 </button>
                             ))}
+                        </div>
+
+                        <div className="px-3 py-2.5 shrink-0" style={{ borderTop: '1px solid var(--line)' }}>
+                            <button className="side-link" onClick={() => setApxOpen(o => !o)}>
+                                <Icon d={I.book} size={16} /> Appendices <span className="text-[11px] font-bold" style={{ color: 'var(--muted)' }}>(38)</span>
+                                <span className="ml-auto" style={{ color: 'var(--muted)' }}><Icon d={apxOpen ? I.up : I.down} size={14} /></span>
+                            </button>
+                            {apxOpen && (
+                                <div className="max-h-64 overflow-y-auto mt-1 space-y-0.5">
+                                    {apxList ? apxList.map(a => (
+                                        <button key={a.n} className="chap-row" onClick={() => openDoc('appendix-' + a.n)}>
+                                            <span className="chap-badge">{a.n}</span>
+                                            <span className="flex-1 min-w-0 text-[12.5px] font-semibold truncate text-left" style={{ color: 'var(--ink)' }}>{a.title}</span>
+                                        </button>
+                                    )) : <div className="text-[12px] px-3 py-2" style={{ color: 'var(--muted)' }}>Loading…</div>}
+                                </div>
+                            )}
                         </div>
                         {!isApp && (
                             <div className="px-3 py-2.5 shrink-0" style={{ borderTop: '1px solid var(--line)' }}>
@@ -2601,6 +2691,7 @@
                                         bookmarked={bookmarks.includes(`${v.Surah}:${v.Ayah}`)}
                                         onWord={setWordSel}
                                         activeWordKey={wordSel ? `${wordSel.surah}:${wordSel.ayah}:${wordSel.wordIndex}` : null}
+                                        audioWordKey={audioWord}
                                         playing={playing}
                                         isCurrentInContinuous={continuous && playing === `${v.Surah}:${v.Ayah}`}
                                         onPlay={(s, a) => playSingle(s, a)}
@@ -2611,50 +2702,83 @@
                                         onExplain={v => setAiSel(v)} />
                                 ))}
                             </div>
+
+                            {/* Prev / Next sura */}
+                            <div className="flex items-stretch justify-between gap-3 mt-8">
+                                {currentSurah > 1 ? (
+                                    <button onClick={() => openSurah(currentSurah - 1)}
+                                            className="ws-card ws-card-hover rounded-2xl px-5 py-4 flex-1 text-left cursor-pointer">
+                                        <div className="eyebrow">← Previous</div>
+                                        <div className="font-semibold text-[14.5px] mt-0.5" style={{ color: 'var(--ink)' }}>{currentSurah - 1} · {surahs[currentSurah - 2].en.replace(/\s*\(.*\)$/, '')}</div>
+                                    </button>
+                                ) : <div className="flex-1"></div>}
+                                {currentSurah < 114 ? (
+                                    <button onClick={() => openSurah(currentSurah + 1)}
+                                            className="ws-card ws-card-hover rounded-2xl px-5 py-4 flex-1 text-right cursor-pointer">
+                                        <div className="eyebrow">Next →</div>
+                                        <div className="font-semibold text-[14.5px] mt-0.5" style={{ color: 'var(--ink)' }}>{currentSurah + 1} · {surahs[currentSurah].en.replace(/\s*\(.*\)$/, '')}</div>
+                                    </button>
+                                ) : <div className="flex-1"></div>}
+                            </div>
                         </main>
                     )}
 
-                    {/* ══ DOCUMENT (Proclamation / Introduction) ══ */}
+                    {/* ══ DOCUMENT ══ */}
                     {view === 'doc' && docId && (
                         <main className="max-w-3xl mx-auto px-4">
-                            <section className="mt-6">
+                            <section className="mt-6 flex items-center justify-between gap-3">
                                 <button className="toc-btn" onClick={() => { setView('home'); window.scrollTo({ top: 0 }); }}>
                                     <Icon d={I.left} size={15} /> Back
                                 </button>
+                                {docData && docData.multi && (
+                                    <div className="flex items-center gap-1.5">
+                                        {Object.keys(docData.multi).map(k => (
+                                            <button key={k} onClick={() => setDocLang(k)}
+                                                    className={'lang-pill rounded-full font-bold text-xs px-3 py-1.5 ' + (docLang === k ? 'on' : '') + (k === 'ta' ? ' font-tamil' : '')}>
+                                                {k === 'ta' ? 'தமிழ்' : 'English'}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
                             </section>
                             {docLoading && (
                                 <div className="ws-card rounded-2xl p-10 mt-5 text-center" style={{ color: 'var(--muted)' }}>
                                     <span className="spin inline-flex mr-2"><Icon d={I.loader} size={15} /></span> Loading…
                                 </div>
                             )}
-                            {docData && (
-                                <article className="ws-card rounded-3xl mt-5 px-6 sm:px-10 py-9">
-                                    <div className="text-center mb-8">
-                                        <div className="eyebrow">{docData.eyebrow}</div>
-                                        <h1 className="font-display hero-title tracking-tight mt-2 mb-0" style={{ fontSize: 'clamp(30px, 5vw, 44px)', fontWeight: 400 }}>{docData.title}</h1>
-                                        <Orn />
-                                        <p className="verse-en italic mt-0 mb-0 text-[15px]" style={{ color: 'var(--muted)' }}>{docData.subtitle}</p>
-                                    </div>
-                                    {docData.sections.map((sec, si) => (
-                                        <section key={si}>
-                                            {sec.h && <h2 className="font-display text-[21px] mb-3 mt-9" style={{ color: 'var(--accent-deep)', fontWeight: 400 }}>{sec.h}</h2>}
-                                            {sec.items.map((it, ii) => it.t === 'q' ? (
-                                                <blockquote key={ii} className="my-5 ml-0 mr-0 pl-5 py-0.5" style={{ borderLeft: '3px solid color-mix(in srgb, var(--gold) 65%, transparent)' }}>
-                                                    <p className="verse-en italic text-[16px] leading-relaxed m-0" style={{ color: 'var(--ink)' }}>
-                                                        <DocText text={it.text} onRef={goToVerse} />
+                            {docData && (() => {
+                                const content = docData.multi ? (docData.multi[docLang] || docData.multi.en) : docData;
+                                const taMode = docData.multi && docLang === 'ta' && docData.multi.ta;
+                                const bodyCls = taMode ? 'font-tamil' : 'verse-en';
+                                return (
+                                    <article className="ws-card rounded-3xl mt-5 px-6 sm:px-10 py-9">
+                                        <div className="text-center mb-8">
+                                            <div className="eyebrow">{content.eyebrow}</div>
+                                            <h1 className={'font-display hero-title tracking-tight mt-2 mb-0 ' + (taMode ? 'font-tamil' : '')} style={{ fontSize: 'clamp(26px, 5vw, 42px)', fontWeight: 400 }}>{content.title}</h1>
+                                            <Orn />
+                                            <p className={bodyCls + ' italic mt-0 mb-0 text-[15px]'} style={{ color: 'var(--muted)' }}>{content.subtitle}</p>
+                                        </div>
+                                        {content.sections.map((sec, si) => (
+                                            <section key={si}>
+                                                {sec.h && <h2 className={'font-display text-[21px] mb-3 mt-9 ' + (taMode ? 'font-tamil' : '')} style={{ color: 'var(--accent-deep)', fontWeight: 400 }}>{sec.h}</h2>}
+                                                {sec.items.map((it, ii) => it.t === 'q' ? (
+                                                    <blockquote key={ii} className="my-5 ml-0 mr-0 pl-5 py-0.5" style={{ borderLeft: '3px solid color-mix(in srgb, var(--gold) 65%, transparent)' }}>
+                                                        <p className={bodyCls + ' italic text-[16px] leading-relaxed m-0'} style={{ color: 'var(--ink)' }}>
+                                                            <DocText text={it.text} />
+                                                        </p>
+                                                        {it.by && <div className="eyebrow mt-2" style={{ fontSize: 10 }}><DocText text={it.by} /></div>}
+                                                    </blockquote>
+                                                ) : (
+                                                    <p key={ii} className={bodyCls + ' text-[16px] mb-4'} style={{ color: 'var(--ink-soft)', lineHeight: 1.85 }}>
+                                                        <DocText text={it.text} />
                                                     </p>
-                                                    {it.by && <div className="eyebrow mt-2" style={{ fontSize: 10 }}>{it.by}</div>}
-                                                </blockquote>
-                                            ) : (
-                                                <p key={ii} className="verse-en text-[16px] mb-4" style={{ color: 'var(--ink-soft)', lineHeight: 1.85 }}>
-                                                    <DocText text={it.text} onRef={goToVerse} />
-                                                </p>
-                                            ))}
-                                        </section>
-                                    ))}
-                                    <div className="ornament" aria-hidden="true">✦</div>
-                                </article>
-                            )}
+                                                ))}
+                                            </section>
+                                        ))}
+                                        <div className="ornament" aria-hidden="true">✦</div>
+                                    </article>
+                                );
+                            })()}
                         </main>
                     )}
 
@@ -2754,6 +2878,39 @@
                                   onClose={() => setAskOpen(false)}
                                   onGoToVerse={(s, a) => { setAskOpen(false); goToVerse(s, a); }} />
                     )}
+
+
+                    {/* ── verse-reference popup ── */}
+                    {refPop && (() => {
+                        const rv = verses.find(x => Number(x.Surah) === refPop.s && Number(x.Ayah) === refPop.a);
+                        return (
+                            <div className="fixed inset-0 z-[80] flex items-center justify-center p-4" onClick={() => setRefPop(null)}>
+                                <div className="absolute inset-0" style={{ background: 'rgba(9,14,32,.35)', backdropFilter: 'blur(1px)' }}></div>
+                                <div onClick={e => e.stopPropagation()} className="fade-in relative w-full max-w-md rounded-3xl overflow-hidden"
+                                     style={{ background: 'var(--bg-soft)', boxShadow: 'var(--shadow-lg)', border: '1px solid var(--line)' }}>
+                                    <div className="px-6 pt-5 pb-4 max-h-[60vh] overflow-y-auto">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <span className="vnum">{refPop.s}:{refPop.a}</span>
+                                            <button className="icon-btn" onClick={() => setRefPop(null)}><Icon d={I.x} size={16} /></button>
+                                        </div>
+                                        {rv ? (
+                                            <div>
+                                                {show.ar && rv.Arabic && <div dir="rtl" lang="ar" className="font-arabic text-right mb-3" style={{ fontSize: 26, lineHeight: 1.9, color: 'var(--ink)' }}>{rv.Arabic}</div>}
+                                                {rv.English && <p className="verse-en text-[16.5px] leading-relaxed m-0" style={{ color: 'var(--ink)' }}>{String(rv.English).replace(/\*/g, '')}</p>}
+                                                {show.ta && rv.Tamil && <p className="font-tamil text-[14.5px] leading-loose mt-2 mb-0" style={{ color: 'var(--ink-soft)' }}>{String(rv.Tamil).replace(/\*/g, '')}</p>}
+                                            </div>
+                                        ) : <p className="text-sm m-0" style={{ color: 'var(--muted)' }}>Verse not found.</p>}
+                                    </div>
+                                    <div className="px-6 py-3 text-right" style={{ borderTop: '1px solid var(--line)', background: 'var(--card)' }}>
+                                        <button className="text-[13.5px] font-bold cursor-pointer" style={{ background: 'none', border: 'none', color: 'var(--accent-deep)' }}
+                                                onClick={() => { const p2 = refPop; setRefPop(null); window.__goVerse(p2.s, p2.a); }}>
+                                            Open in Quran reader ↗
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })()}
 
                     {/* ── Quran Quiz ── */}
                     {quizOpen && (
