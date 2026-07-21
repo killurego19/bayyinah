@@ -10,7 +10,7 @@
 // Required env var:  GEMINI_API_KEY
 // Optional env var:  GROQ_API_KEY   (enables the fallback; get a free key at console.groq.com)
 
-const GEMINI_MODEL = "gemini-2.5-flash";
+const GEMINI_MODEL = "gemini-flash-latest";  // auto-updating alias (currently gemini-3.5-flash); gemini-2.5-flash was retired for new keys
 const GROQ_MODEL   = "llama-3.3-70b-versatile"; // free fallback; far stronger multilingual/Tamil than 8b
 
 // ---- simple in-memory cache (per warm serverless instance) ----
