@@ -1898,7 +1898,7 @@
             const [toast, setToast] = useState(null);
             const [randomV, setRandomV] = useState(null);
             const [chaptersOpen, setChaptersOpen] = useState(true);
-            const [mode, setModeState] = useState(() => localStorage.getItem('quranMode') || 'verse');
+            const [mode, setModeState] = useState(() => localStorage.getItem('quranMode') || 'word');
             const setMode = m => { setModeState(m); localStorage.setItem('quranMode', m); };
             const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 1024);
             const [chapterFilter, setChapterFilter] = useState('');
@@ -2087,7 +2087,7 @@
                 audio.ontimeupdate = () => {
                     const words = wbwCache[s] && wbwCache[s][String(a)];
                     if (!words || !audio.duration) return;
-                    const idx = Math.min(words.length - 1, Math.floor((audio.currentTime / audio.duration) * words.length));
+                    const idx = Math.min(words.length - 1, Math.max(0, Math.floor((audio.currentTime / audio.duration) * words.length) + 1));
                     setAudioWord(s + ':' + a + ':' + idx);
                 };
                 audio.play().catch(resolve);
