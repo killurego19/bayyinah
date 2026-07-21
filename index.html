@@ -987,7 +987,7 @@
             if (wbwCache[surah]) return wbwCache[surah];
             const r = await fetch(`${DATA_DIR}/wbw/${surah}.json`);
             const j = await r.json();
-            for (const k in j) j[k].forEach(t => { t[0] = String(t[0]).replace(/[\u06EA\u06EB\u06EC]/g, ''); });
+            for (const k in j) j[k].forEach(t => { t[0] = String(t[0]).replace(/[\u06DF\u06EA\u06EB\u06EC]/g, ''); });
             wbwCache[surah] = j;
             return j;
         }
@@ -1989,7 +1989,7 @@
                     try {
                         const res = await fetch('quran-data.json');
                         const data = await res.json();
-                        data.forEach(v => { if (v.Arabic) v.Arabic = String(v.Arabic).replace(/[\u06EA\u06EB\u06EC]/g, ''); });
+                        data.forEach(v => { if (v.Arabic) v.Arabic = String(v.Arabic).replace(/[\u06DF\u06EA\u06EB\u06EC]/g, ''); });
                         setVerses(data);
                         setLoading(false);
                     } catch (e) {
