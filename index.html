@@ -890,7 +890,7 @@
                 const m = part.match(/^(\d{1,3}):(\d{1,3})$/);
                 if (m) {
                     const prev = parts.slice(0, i).join('');
-                    const biblical = /(Deuteronomy|Malachi|Matthew|Luke|Mark|John|Genesis|Veda)[\s(]*$/i.test(prev);
+                    const biblical = /(Deuteronomy|Malachi|Matthew|Luke|Mark|John|Genesis|Veda|மல்கியா|லூக்கா|மத்தேயு|மாற்கு|யோவான்|உபாகமம்|ஆதியாகமம்|சங்கீதம்|எபிரேயர்)[\s(]*$/i.test(prev);
                     const s = Number(m[1]), a = Number(m[2]);
                     if (!biblical && s >= 1 && s <= 114 && a >= 0 && a <= VERSE_COUNTS[s - 1]) {
                         return <span key={i} className="ref-link" title={'Verse ' + part}
