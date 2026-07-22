@@ -33,6 +33,7 @@
                     fontFamily: {
                         display: ['Marcellus', 'Georgia', 'serif'],
                         tamil: ['"Noto Sans Tamil"', 'sans-serif'],
+                        hindi: ['"Noto Sans Devanagari"', 'sans-serif'],
                     }
                 }
             }
@@ -47,7 +48,7 @@
     <script src="https://unpkg.com/@babel/standalone@7.25.6/babel.min.js"></script>
 
     <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Inter:wght@400;500;600;700&family=Noto+Sans+Tamil:wght@400;500;600;700&family=Scheherazade+New:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Inter:wght@400;500;600;700&family=Noto+Sans+Tamil:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Scheherazade+New:wght@400;700&display=swap" rel="stylesheet">
 
     <style>
         @font-face {
@@ -1727,7 +1728,7 @@
             const isBasmalah = a === 0;
             const arSizes = { small: 26, medium: 32, large: 40, xl: 48, xxl: 58 };
             const trSizes = { small: 'text-sm', medium: 'text-[16px]', large: 'text-lg', xl: 'text-[20px]', xxl: 'text-[23px]' };
-            const hasFootnote = verse.English_Footnote || verse.Tamil_Footnote;
+            const hasFootnote = verse.English_Footnote || verse.Tamil_Footnote || verse.Hindi_Footnote;
             const [openFootnote, setOpenFootnote] = useState(false);
 
             const arabicLine = wbwWords ? (
@@ -1756,6 +1757,9 @@
                     )}
                     {(show.ta && verse.Tamil_Subtitle) && (
                         <div className="text-center font-tamil text-sm mb-3" style={{ color: 'var(--accent)' }}>{verse.Tamil_Subtitle}</div>
+                    )}
+                    {(show.hi && verse.Hindi_Subtitle) && (
+                        <div className="text-center font-hindi text-sm mb-3" style={{ color: 'var(--accent)' }}>{verse.Hindi_Subtitle}</div>
                     )}
 
                     <div className="flex items-start justify-between gap-3 mb-1">
@@ -1788,6 +1792,11 @@
                     {show.ta && verse.Tamil && (
                         <p className={`font-tamil ${trSizes[fontSize]} leading-loose mt-3 mb-0 ${isBasmalah ? 'text-center' : ''}`} style={{ color: 'var(--ink-soft)' }}>
                             <TransText text={verse.Tamil} onStar={() => setOpenFootnote(o => !o)} query={query} />
+                        </p>
+                    )}
+                    {show.hi && verse.Hindi && (
+                        <p className={`font-hindi ${trSizes[fontSize]} leading-loose mt-3 mb-0 ${isBasmalah ? 'text-center' : ''}`} style={{ color: 'var(--ink-soft)' }}>
+                            <TransText text={verse.Hindi} onStar={() => setOpenFootnote(o => !o)} query={query} />
                         </p>
                     )}
 
@@ -1823,7 +1832,8 @@
                                         <div className="space-y-2" style={{ color: 'var(--ink-soft)' }}>
                                             {show.en && verse.English_Footnote && <p className="m-0 whitespace-pre-line"><DocText text={verse.English_Footnote} /></p>}
                                             {show.ta && verse.Tamil_Footnote && <p className="m-0 font-tamil whitespace-pre-line"><DocText text={verse.Tamil_Footnote} /></p>}
-                                            {!show.en && !show.ta && verse.English_Footnote && <p className="m-0 whitespace-pre-line"><DocText text={verse.English_Footnote} /></p>}
+                                            {show.hi && verse.Hindi_Footnote && <p className="m-0 font-hindi whitespace-pre-line"><DocText text={verse.Hindi_Footnote} /></p>}
+                                            {!show.en && !show.ta && !show.hi && verse.English_Footnote && <p className="m-0 whitespace-pre-line"><DocText text={verse.English_Footnote} /></p>}
                                         </div>
                                         <button className="icon-btn" style={{ width: 26, height: 26 }} onClick={() => setOpenFootnote(false)}><Icon d={I.x} size={14} /></button>
                                     </div>
@@ -1848,7 +1858,8 @@
                         <div className="fade-in mt-2 space-y-1.5 italic" style={{ color: 'var(--muted)' }}>
                             {show.en && v.English_Footnote && <p className="m-0 whitespace-pre-line verse-en"><DocText text={String(v.English_Footnote).replace(/^\*/, '')} /></p>}
                             {show.ta && v.Tamil_Footnote && <p className="m-0 whitespace-pre-line font-tamil not-italic"><DocText text={String(v.Tamil_Footnote).replace(/^\*/, '')} /></p>}
-                            {!show.en && !show.ta && v.English_Footnote && <p className="m-0 whitespace-pre-line verse-en"><DocText text={String(v.English_Footnote).replace(/^\*/, '')} /></p>}
+                            {show.hi && v.Hindi_Footnote && <p className="m-0 whitespace-pre-line font-hindi not-italic"><DocText text={String(v.Hindi_Footnote).replace(/^\*/, '')} /></p>}
+                            {!show.en && !show.ta && !show.hi && v.English_Footnote && <p className="m-0 whitespace-pre-line verse-en"><DocText text={String(v.English_Footnote).replace(/^\*/, '')} /></p>}
                         </div>
                     )}
                 </div>
@@ -1902,16 +1913,26 @@
                             ))}
                         </p>
                     )}
-                    {!show.ar && !show.en && !show.ta && (
+                    {show.hi && (
+                        <p className={`font-hindi ${trSizes[fontSize]} leading-loose m-0`} style={{ color: 'var(--ink-soft)' }}>
+                            {list.map(v => (
+                                <React.Fragment key={v.Ayah}>
+                                    {Number(v.Ayah) > 0 && <sup className="font-bold mr-0.5" style={{ color: 'var(--accent)' }}>{v.Ayah}</sup>}
+                                    {String(v.Hindi || '').replace(/\*/g, '')}{' '}
+                                </React.Fragment>
+                            ))}
+                        </p>
+                    )}
+                    {!show.ar && !show.en && !show.ta && !show.hi && (
                         <p className="text-center text-sm m-0" style={{ color: 'var(--muted)' }}>All languages are turned off — enable one in Settings or the language pills.</p>
                     )}
 
                     {/* endnotes — footnotes preserved in book-flow mode */}
-                    {(show.en || show.ta) && list.some(v => v.English_Footnote || v.Tamil_Footnote) && (
+                    {(show.en || show.ta) && list.some(v => v.English_Footnote || v.Tamil_Footnote || v.Hindi_Footnote) && (
                         <div style={{ borderTop: '1px solid var(--line)' }} className="pt-6">
                             <div className="eyebrow mb-3">Footnotes{show.ta ? <span className="font-tamil normal-case tracking-normal"> · அடிக்குறிப்புகள்</span> : null}</div>
                             <div className="space-y-3">
-                                {list.filter(v => v.English_Footnote || v.Tamil_Footnote).map(v => <EndNote key={v.Ayah} v={v} show={show} />)}
+                                {list.filter(v => v.English_Footnote || v.Tamil_Footnote || v.Hindi_Footnote).map(v => <EndNote key={v.Ayah} v={v} show={show} />)}
                             </div>
                         </div>
                     )}
@@ -1927,8 +1948,8 @@
             const [currentSurah, setCurrentSurah] = useState(1);
             const [dark, setDark] = useState(() => localStorage.getItem('quranTheme') === 'dark');
             const [show, setShow] = useState(() => {
-                try { return JSON.parse(localStorage.getItem('quranLangs')) || { ar: true, en: true, ta: true }; }
-                catch (e) { return { ar: true, en: true, ta: true }; }
+                try { return JSON.parse(localStorage.getItem('quranLangs')) || { ar: true, en: true, ta: true, hi: false }; }
+                catch (e) { return { ar: true, en: true, ta: true, hi: false }; }
             });
             const [fontSize, setFontSize] = useState(() => localStorage.getItem('quranFontSize') || 'medium');
             const [query, setQuery] = useState('');
@@ -2034,7 +2055,7 @@
             useEffect(() => {
                 (async () => {
                     try {
-                        const res = await fetch('quran-data.json');
+                        const res = await fetch('quran-data.json', { cache: 'no-cache' });
                         const data = await res.json();
                         data.forEach(v => { if (v.Arabic) v.Arabic = String(v.Arabic).replace(/[\u06DF\u06EA\u06EB\u06EC]/g, ''); });
                         setVerses(data);
@@ -2157,7 +2178,7 @@
             const speak = (text, lang) => new Promise(resolve => {
                 if (!text || !window.speechSynthesis) return resolve();
                 const u = new SpeechSynthesisUtterance(String(text).replace(/\*/g, ''));
-                u.lang = lang === 'ta' ? 'ta-IN' : 'en-US';
+                u.lang = lang === 'ta' ? 'ta-IN' : (lang === 'hi' ? 'hi-IN' : 'en-US');
                 const voices = window.speechSynthesis.getVoices();
                 const v = voices.find(x => x.lang && x.lang.toLowerCase().startsWith(lang === 'ta' ? 'ta' : 'en'));
                 if (v) u.voice = v;
@@ -2171,12 +2192,17 @@
                 const v = verses.find(x => Number(x.Surah) === s && Number(x.Ayah) === a);
                 setPlaying(`${s}:${a}`);
                 // read aloud in exactly the languages the user has selected in Settings
-                const langs = (show.ar || show.en || show.ta) ? show : { ar: true };
+                const langs = (show.ar || show.en || show.ta || show.hi) ? show : { ar: true };
                 if (langs.ar) { await playQari(s, a, token); setAudioWord(null); if (playTokenRef.current !== token) return; }
                 if (langs.en && v && v.English) { await speak(v.English, 'en'); if (playTokenRef.current !== token) return; }
                 if (langs.ta && v && v.Tamil) {
                     try { await playProxyTTS(v.Tamil, 'ta', token); }
                     catch (e) { await speak(v.Tamil, 'ta'); }
+                    if (playTokenRef.current !== token) return;
+                }
+                if (langs.hi && v && v.Hindi) {
+                    try { await playProxyTTS(v.Hindi, 'hi', token); }
+                    catch (e) { await speak(v.Hindi, 'hi'); }
                     if (playTokenRef.current !== token) return;
                 }
             }, [show, verses]);
@@ -2359,6 +2385,7 @@
                 if (show.ar && v.Arabic) bits.push('', v.Arabic);
                 if (show.en && v.English) bits.push('', String(v.English).replace(/\*/g, ''));
                 if (show.ta && v.Tamil) bits.push('', String(v.Tamil).replace(/\*/g, ''));
+                if (show.hi && v.Hindi) bits.push('', String(v.Hindi).replace(/\*/g, ''));
                 return bits.join('\n');
             };
             const copyVerse = v => {
@@ -2447,7 +2474,7 @@
             // ── language pills ──
             const LangPills = ({ compact }) => (
                 <div className="flex items-center gap-1.5">
-                    {[['ar', 'ع'], ['en', 'En'], ['ta', 'த']].map(([k, label]) => (
+                    {[['ar', 'ع'], ['en', 'En'], ['ta', 'த'], ['hi', 'हि']].map(([k, label]) => (
                         <button key={k}
                                 onClick={() => setShow(s => ({ ...s, [k]: !s[k] }))}
                                 className={`lang-pill rounded-full font-bold ${compact ? 'text-xs px-3 py-1.5' : 'text-sm px-4 py-2'} ${show[k] ? 'on' : ''}`}
@@ -2616,7 +2643,7 @@
                                 </h1>
                                 <Orn />
                                 <p className="mt-0 mb-6 text-[15px]" style={{ color: 'var(--muted)' }}>
-                                    Arabic · English · Tamil · <span className="text-[13px]">(Hindi translation coming soon — InshaAllah)</span>
+                                    Arabic · English · Tamil · Hindi <span className="text-[13px]">(हिन्दी: suras 1–4, 7–11 — more added as completed, InshaAllah)</span>
                                 </p>
 
                                 {/* Search */}
@@ -2959,6 +2986,7 @@
                                                 {show.ar && rv.Arabic && <div dir="rtl" lang="ar" className="font-arabic text-right mb-3" style={{ fontSize: 26, lineHeight: 1.9, color: 'var(--ink)' }}>{rv.Arabic}</div>}
                                                 {rv.English && <p className="verse-en text-[16.5px] leading-relaxed m-0" style={{ color: 'var(--ink)' }}>{String(rv.English).replace(/\*/g, '')}</p>}
                                                 {show.ta && rv.Tamil && <p className="font-tamil text-[14.5px] leading-loose mt-2 mb-0" style={{ color: 'var(--ink-soft)' }}>{String(rv.Tamil).replace(/\*/g, '')}</p>}
+                                                {show.hi && rv.Hindi && <p className="font-hindi text-[14.5px] leading-loose mt-2 mb-0" style={{ color: 'var(--ink-soft)' }}>{String(rv.Hindi).replace(/\*/g, '')}</p>}
                                             </div>
                                         ) : <p className="text-sm m-0" style={{ color: 'var(--muted)' }}>Verse not found.</p>}
                                     </div>
@@ -3032,10 +3060,10 @@
 
                                 <div className="eyebrow mb-2">Languages</div>
                                 <div className="flex items-center gap-2 mb-5">
-                                    {[['ar', 'العربية'], ['en', 'English'], ['ta', 'தமிழ்']].map(([k, label]) => (
+                                    {[['ar', 'العربية'], ['en', 'English'], ['ta', 'தமிழ்'], ['hi', 'हिन्दी']].map(([k, label]) => (
                                         <button key={k}
                                                 onClick={() => setShow(s => ({ ...s, [k]: !s[k] }))}
-                                                className={`lang-pill rounded-full font-bold text-sm px-4 py-2 ${show[k] ? 'on' : ''} ${k === 'ta' ? 'font-tamil' : ''}`}>
+                                                className={`lang-pill rounded-full font-bold text-sm px-4 py-2 ${show[k] ? 'on' : ''} ${k === 'ta' ? 'font-tamil' : ''} ${k === 'hi' ? 'font-hindi' : ''}`}>
                                             {label}
                                         </button>
                                     ))}
@@ -3199,10 +3227,12 @@
                                 {show.ar && randomV.Arabic && <div className="font-arabic text-right leading-loose mb-3" dir="rtl" style={{ fontSize: 28 }}>{randomV.Arabic}</div>}
                                 {show.en && randomV.English && <p className="verse-en text-[16px] leading-relaxed" style={{ color: 'var(--ink-soft)' }}>{String(randomV.English).replace(/\*/g, '')}</p>}
                                 {show.ta && randomV.Tamil && <p className="font-tamil text-[15px] leading-loose" style={{ color: 'var(--ink-soft)' }}>{String(randomV.Tamil).replace(/\*/g, '')}</p>}
-                                {(randomV.English_Footnote || randomV.Tamil_Footnote) && (
+                                {show.hi && randomV.Hindi && <p className="font-hindi text-[15px] leading-loose" style={{ color: 'var(--ink-soft)' }}>{String(randomV.Hindi).replace(/\*/g, '')}</p>}
+                                {(randomV.English_Footnote || randomV.Tamil_Footnote || randomV.Hindi_Footnote) && (
                                     <div className="mt-3 text-[13px] italic leading-relaxed space-y-1.5" style={{ color: 'var(--muted)' }}>
                                         {(show.en || !show.ta) && randomV.English_Footnote && <p className="m-0 whitespace-pre-line verse-en">{String(randomV.English_Footnote).replace(/^\*/, '± ')}</p>}
                                         {show.ta && randomV.Tamil_Footnote && <p className="m-0 whitespace-pre-line font-tamil not-italic">{String(randomV.Tamil_Footnote).replace(/^\*/, '± ')}</p>}
+                                        {show.hi && randomV.Hindi_Footnote && <p className="m-0 whitespace-pre-line font-hindi not-italic">{String(randomV.Hindi_Footnote).replace(/^\*/, '± ')}</p>}
                                     </div>
                                 )}
                                 <div className="flex gap-2 mt-5">
