@@ -47,6 +47,23 @@
     <!-- Babel for JSX -->
     <script src="https://unpkg.com/@babel/standalone@7.25.6/babel.min.js"></script>
 
+    <!-- Firebase (compat build for no-bundler use) — Google Sign-In + Firestore bookmark sync -->
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <script>
+        try {
+            firebase.initializeApp({
+                apiKey: "AIzaSyAIvmDEiHvbxsyqIqvPnGg08aik1ra4yIw",
+                authDomain: "bayyinah-c110a.firebaseapp.com",
+                projectId: "bayyinah-c110a",
+                storageBucket: "bayyinah-c110a.firebasestorage.app",
+                messagingSenderId: "831184810834",
+                appId: "1:831184810834:web:b134bfb3ef6014e9ebc08b"
+            });
+        } catch (e) { /* SDK blocked/offline — app still works without sync */ }
+    </script>
+
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Inter:wght@400;500;600;700&family=Noto+Sans+Tamil:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Scheherazade+New:wght@400;700&display=swap" rel="stylesheet">
 
@@ -1961,6 +1978,9 @@
                 try { return JSON.parse(localStorage.getItem('quranBookmarks')) || []; } catch (e) { return []; }
             });
             const [showBookmarks, setShowBookmarks] = useState(false);
+            const [fbUser, setFbUser] = useState(null);
+            const applyingRemoteRef = useRef(false);
+            const cloudUnsubRef = useRef(null);
             const [playing, setPlaying] = useState(null);
             const [continuous, setContinuous] = useState(false);
             const [toast, setToast] = useState(null);
@@ -2050,6 +2070,64 @@
             useEffect(() => { localStorage.setItem('quranLangs', JSON.stringify(show)); }, [show]);
             useEffect(() => { localStorage.setItem('quranFontSize', fontSize); }, [fontSize]);
             useEffect(() => { localStorage.setItem('quranBookmarks', JSON.stringify(bookmarks)); }, [bookmarks]);
+
+            // ── Firebase auth + bookmark cloud sync ──
+            const fbReady = () => (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length > 0);
+            const writeCloud = list => {
+                if (!fbReady() || !fbUser) return;
+                firebase.firestore().collection('users').doc(fbUser.uid)
+                    .set({ bookmarks: list, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true })
+                    .catch(() => {});
+            };
+            const signIn = () => {
+                if (!fbReady()) { flash('Sign-in unavailable right now'); return; }
+                firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider())
+                    .catch(e => { if (e && e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') flash('Sign-in failed — please try again'); });
+            };
+            const signOutUser = () => { if (fbReady()) firebase.auth().signOut(); };
+
+            useEffect(() => {
+                if (!fbReady()) return;
+                const unsub = firebase.auth().onAuthStateChanged(u => setFbUser(u || null));
+                return unsub;
+            }, []);
+
+            useEffect(() => {
+                if (cloudUnsubRef.current) { cloudUnsubRef.current(); cloudUnsubRef.current = null; }
+                if (!fbReady() || !fbUser) return;
+                const ref = firebase.firestore().collection('users').doc(fbUser.uid);
+                let cancelled = false;
+                (async () => {
+                    try {
+                        const snap = await ref.get();
+                        const cloud = (snap.exists && Array.isArray(snap.data().bookmarks)) ? snap.data().bookmarks : [];
+                        let local = [];
+                        try { local = JSON.parse(localStorage.getItem('quranBookmarks')) || []; } catch (e) {}
+                        const merged = Array.from(new Set([...cloud, ...local])).sort((a, b) => {
+                            const [as, aa] = a.split(':').map(Number), [bs, ba] = b.split(':').map(Number);
+                            return as - bs || aa - ba;
+                        });
+                        if (cancelled) return;
+                        applyingRemoteRef.current = true;
+                        setBookmarks(merged);
+                        applyingRemoteRef.current = false;
+                        if (merged.length !== cloud.length) writeCloud(merged);  // push newly-merged local ones
+                    } catch (e) {}
+                    if (cancelled) return;
+                    cloudUnsubRef.current = ref.onSnapshot(snap => {
+                        if (!snap.exists) return;
+                        const cloud = Array.isArray(snap.data().bookmarks) ? snap.data().bookmarks : [];
+                        setBookmarks(prev => {
+                            const same = prev.length === cloud.length && prev.every(x => cloud.includes(x));
+                            if (same) return prev;
+                            applyingRemoteRef.current = true;
+                            setTimeout(() => { applyingRemoteRef.current = false; }, 0);
+                            return cloud;
+                        });
+                    }, () => {});
+                })();
+                return () => { cancelled = true; if (cloudUnsubRef.current) { cloudUnsubRef.current(); cloudUnsubRef.current = null; } };
+            }, [fbUser]);
 
             // load excel
             useEffect(() => {
@@ -2377,7 +2455,9 @@
             const toggleBookmark = (s, a) => {
                 const key = `${s}:${a}`;
                 const has = bookmarks.includes(key);
-                setBookmarks(b => has ? b.filter(x => x !== key) : [...b, key]);
+                const next = has ? bookmarks.filter(x => x !== key) : [...bookmarks, key];
+                setBookmarks(next);
+                writeCloud(next);
                 flash(has ? 'Bookmark removed' : 'Bookmark saved');
             };
             const buildVerseText = v => {
@@ -3193,9 +3273,29 @@
                             <div onClick={e => e.stopPropagation()}
                                  className="fade-in relative w-full max-w-md max-h-[70vh] overflow-y-auto rounded-3xl p-6"
                                  style={{ background: 'var(--bg-soft)', boxShadow: 'var(--shadow-lg)', border: '1px solid var(--line)' }}>
-                                <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center justify-between mb-3">
                                     <h3 className="font-display font-bold text-xl m-0">Bookmarks</h3>
                                     <button className="icon-btn" onClick={() => setShowBookmarks(false)}><Icon d={I.x} /></button>
+                                </div>
+                                <div className="mb-4 rounded-2xl px-3 py-2.5" style={{ background: 'color-mix(in srgb, var(--accent) 7%, transparent)', border: '1px solid var(--line)' }}>
+                                    {fbUser ? (
+                                        <div className="flex items-center gap-2.5">
+                                            {fbUser.photoURL
+                                                ? <img src={fbUser.photoURL} alt="" referrerPolicy="no-referrer" style={{ width: 30, height: 30, borderRadius: 999 }} />
+                                                : <span className="grid place-items-center shrink-0" style={{ width: 30, height: 30, borderRadius: 999, background: 'var(--accent)', color: 'var(--bg-soft)', fontWeight: 700 }}>{(fbUser.displayName || fbUser.email || '?')[0].toUpperCase()}</span>}
+                                            <div className="min-w-0 flex-1">
+                                                <div className="text-[13px] font-bold truncate" style={{ color: 'var(--ink)' }}>{fbUser.displayName || fbUser.email}</div>
+                                                <div className="text-[11px]" style={{ color: 'var(--emerald)' }}>✓ Synced across your devices</div>
+                                            </div>
+                                            <button className="lang-pill rounded-full text-[11.5px] font-bold px-3 py-1.5" onClick={signOutUser}>Sign out</button>
+                                        </div>
+                                    ) : (
+                                        <button onClick={signIn} className="w-full flex items-center justify-center gap-2.5 py-2 rounded-xl text-[13.5px] font-bold cursor-pointer"
+                                                style={{ background: 'var(--card)', border: '1px solid var(--line-strong)', color: 'var(--ink)' }}>
+                                            <svg width="17" height="17" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+                                            Sign in with Google to sync
+                                        </button>
+                                    )}
                                 </div>
                                 {bookmarks.length === 0
                                     ? <p className="text-sm" style={{ color: 'var(--muted)' }}>No bookmarks yet — tap the bookmark icon on any verse.</p>
