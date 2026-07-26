@@ -1753,7 +1753,7 @@
                      style={{ fontSize: arSizes[fontSize] * (isBasmalah ? 0.9 : 1), lineHeight: 2.05, color: 'var(--ink)' }}>
                     {wbwWords.map((w, i) => (
                         <React.Fragment key={i}>
-                            <span className={`arabic-word ${(activeWordKey === `${s}:${a}:${i}` || audioWordKey === `${s}:${a}:${i}`) ? 'active' : ''}`}
+                            <span className={`arabic-word ${(activeWordKey === `${s}:${a}:${i}`) ? 'active' : ''}`}
                                   onMouseEnter={e => showWordTip(e, w[2] + " · " + w[1])} onMouseLeave={hideWordTip}
                                   onClick={() => onWord({ surah: s, ayah: a, wordIndex: i, word: w })}>{w[0]}</span>
                             {' '}
@@ -1823,7 +1823,7 @@
                             <div dir="rtl" className={`flex flex-wrap gap-y-3 mt-5 ${isBasmalah ? 'justify-center' : ''}`}>
                                 {wbwWords.map((w, i) => (
                                     <div key={i}
-                                         className={`word-cell ${(activeWordKey === `${s}:${a}:${i}` || audioWordKey === `${s}:${a}:${i}`) ? 'active' : ''}`}
+                                         className={`word-cell ${(activeWordKey === `${s}:${a}:${i}`) ? 'active' : ''}`}
                                          onMouseEnter={e => showWordTip(e, w[2] + " · " + w[1])} onMouseLeave={hideWordTip}
                                          onClick={() => onWord({ surah: s, ayah: a, wordIndex: i, word: w })}>
                                         <div className="font-arabic" lang="ar" style={{ fontSize: arSizes[fontSize], lineHeight: 1.7, color: 'var(--ink)' }}>{w[0]}</div>
@@ -1974,8 +1974,22 @@
             const [activeQuery, setActiveQuery] = useState('');
             const [wbw, setWbw] = useState(null);              // wbw for current surah
             const [wordSel, setWordSel] = useState(null);
+            const normBM = raw => {
+                if (!Array.isArray(raw)) return [];
+                const out = [];
+                for (let i = 0; i < raw.length; i++) {
+                    const k = raw[i];
+                    if (typeof k === 'string') { const t = k.trim(); if (/^\d+:\d+$/.test(t)) out.push(t); }
+                    else if (k && typeof k === 'object') {
+                        const sv = k.surah || k.s || k.Surah || (Array.isArray(k) ? k[0] : null);
+                        const av = k.ayah || k.a || k.Ayah || (Array.isArray(k) ? k[1] : null);
+                        if (sv && av && !isNaN(Number(sv)) && !isNaN(Number(av))) out.push(Number(sv) + ':' + Number(av));
+                    }
+                }
+                return out.filter((v, idx) => out.indexOf(v) === idx);
+            };
             const [bookmarks, setBookmarks] = useState(() => {
-                try { return JSON.parse(localStorage.getItem('quranBookmarks')) || []; } catch (e) { return []; }
+                try { return normBM(JSON.parse(localStorage.getItem('quranBookmarks'))); } catch (e) { return []; }
             });
             const [showBookmarks, setShowBookmarks] = useState(false);
             const [fbUser, setFbUser] = useState(null);
@@ -2100,9 +2114,9 @@
                 (async () => {
                     try {
                         const snap = await ref.get();
-                        const cloud = (snap.exists && Array.isArray(snap.data().bookmarks)) ? snap.data().bookmarks : [];
+                        const cloud = normBM((snap.exists && Array.isArray(snap.data().bookmarks)) ? snap.data().bookmarks : []);
                         let local = [];
-                        try { local = JSON.parse(localStorage.getItem('quranBookmarks')) || []; } catch (e) {}
+                        try { local = normBM(JSON.parse(localStorage.getItem('quranBookmarks'))); } catch (e) {}
                         const merged = Array.from(new Set([...cloud, ...local])).sort((a, b) => {
                             const [as, aa] = a.split(':').map(Number), [bs, ba] = b.split(':').map(Number);
                             return as - bs || aa - ba;
@@ -2116,7 +2130,7 @@
                     if (cancelled) return;
                     cloudUnsubRef.current = ref.onSnapshot(snap => {
                         if (!snap.exists) return;
-                        const cloud = Array.isArray(snap.data().bookmarks) ? snap.data().bookmarks : [];
+                        const cloud = normBM(Array.isArray(snap.data().bookmarks) ? snap.data().bookmarks : []);
                         setBookmarks(prev => {
                             const same = prev.length === cloud.length && prev.every(x => cloud.includes(x));
                             if (same) return prev;
@@ -3145,6 +3159,26 @@
                                     <button className="icon-btn" onClick={() => setShowSettings(false)}><Icon d={I.x} /></button>
                                 </div>
 
+                                <div className="eyebrow mb-2">Account</div>
+                                <div className="mb-5">
+                                    {fbUser ? (
+                                        <div className="flex items-center gap-2.5 rounded-2xl px-3 py-2.5" style={{ background: 'color-mix(in srgb, var(--accent) 7%, transparent)', border: '1px solid var(--line)' }}>
+                                            {fbUser.photoURL
+                                                ? <img src={fbUser.photoURL} alt="" referrerPolicy="no-referrer" style={{ width: 30, height: 30, borderRadius: 999 }} />
+                                                : <span className="grid place-items-center shrink-0" style={{ width: 30, height: 30, borderRadius: 999, background: 'var(--accent)', color: 'var(--bg-soft)', fontWeight: 700 }}>{(fbUser.displayName || fbUser.email || '?')[0].toUpperCase()}</span>}
+                                            <div className="min-w-0 flex-1">
+                                                <div className="text-[13px] font-bold truncate" style={{ color: 'var(--ink)' }}>{fbUser.displayName || fbUser.email}</div>
+                                                <div className="text-[11px]" style={{ color: 'var(--emerald)' }}>✓ Bookmarks synced across your devices</div>
+                                            </div>
+                                            <button className="lang-pill rounded-full text-[11.5px] font-bold px-3 py-1.5" onClick={signOutUser}>Sign out</button>
+                                        </div>
+                                    ) : (
+                                        <button onClick={signIn} className="w-full flex items-center justify-center gap-2.5 py-2.5 rounded-xl text-[13.5px] font-bold cursor-pointer" style={{ background: 'var(--card)', border: '1px solid var(--line-strong)', color: 'var(--ink)' }}>
+                                            <svg width="16" height="16" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+                                            Sign in with Google
+                                        </button>
+                                    )}
+                                </div>
                                 <div className="eyebrow mb-2">Languages</div>
                                 <div className="flex items-center gap-2 mb-5">
                                     {[['ar', 'العربية'], ['en', 'English'], ['ta', 'தமிழ்'], ['hi', 'हिन्दी']].map(([k, label]) => (
@@ -3156,13 +3190,6 @@
                                     ))}
                                 </div>
 
-                                <div className="flex items-center gap-2 mb-2">
-                                    <span className="lang-pill rounded-full font-bold text-sm px-4 py-2" style={{ opacity: .55, cursor: 'default' }}>हिन्दी</span>
-                                    <span className="text-[11px] font-bold px-2.5 py-1 rounded-full"
-                                          style={{ background: 'color-mix(in srgb, var(--gold) 14%, transparent)', color: 'var(--accent-deep)', border: '1px solid color-mix(in srgb, var(--gold) 45%, transparent)' }}>
-                                        Hindi translation — coming soon
-                                    </span>
-                                </div>
                                 <p className="text-[12px] mt-1 mb-3" style={{ color: 'var(--muted)' }}>
                                     The speaker button on a verse — and Play chapter — read aloud in every language selected above
                                     (Qari recitation for Arabic, natural voices for English &amp; Tamil), in order.
