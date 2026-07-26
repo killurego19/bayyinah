@@ -1579,6 +1579,8 @@
             const meta = surahs[surah - 1];
             const [lang, setLang] = useState(() => localStorage.getItem('bayyinahAnsLang') || 'en');
             useEffect(() => { localStorage.setItem('bayyinahAnsLang', lang); }, [lang]);
+            const hasHindi = useMemo(() => verses.some(v => Number(v.Surah) === surah && v.Hindi), [verses, surah]);
+            const qlang = (lang === 'hi' && !hasHindi) ? 'en' : lang;
             const [questions, setQuestions] = useState(null);
             const [idx, setIdx] = useState(0);
             const [picked, setPicked] = useState(null);
@@ -1595,14 +1597,14 @@
                         chap = chap.filter((v, i) => i % step === 0);
                     }
                     const ctx = chap.map(v => '[' + v.Surah + ':' + v.Ayah + '] ' +
-                        String((lang === 'ta' ? (v.Tamil || v.English) : v.English) || '').replace(/\*/g, '')).join('\n');
+                        String((qlang === 'hi' ? (v.Hindi || v.English) : qlang === 'ta' ? (v.Tamil || v.English) : v.English) || '').replace(/\*/g, '')).join('\n');
                     const r = await fetch('api/ask', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             system: 'You create Quran quizzes from "Quran: The Final Testament" (Rashad Khalifa). ' +
                                     'Using ONLY the verses provided below, write exactly 5 multiple-choice questions in ' +
-                                    (lang === 'ta' ? 'Tamil (தமிழ்)' : 'English') + '. ' +
+                                    (qlang === 'hi' ? 'Hindi (हिन्दी)' : qlang === 'ta' ? 'Tamil (தமிழ்)' : 'English') + '. ' +
                                     'Respond with ONLY a JSON array, no prose, no code fences: ' +
                                     '[{"q": "question", "options": ["A","B","C","D"], "a": indexOfCorrect0to3, "ref": "sura:verse"}] ' +
                                     'Each question must be answerable from the provided verses alone; "ref" is the verse that proves the answer.\n\nVERSES:\n' + ctx,
@@ -1650,9 +1652,9 @@
                                 <button className="icon-btn" onClick={onClose}><Icon d={I.x} /></button>
                             </div>
                             <div className="flex items-center gap-1.5 mt-3">
-                                {[['en', 'English'], ['ta', 'தமிழ்']].map(([k, label]) => (
+                                {(hasHindi ? [['en', 'English'], ['ta', 'தமிழ்'], ['hi', 'हिन्दी']] : [['en', 'English'], ['ta', 'தமிழ்']]).map(([k, label]) => (
                                     <button key={k} onClick={() => setLang(k)} disabled={loading}
-                                            className={'lang-pill rounded-full font-bold text-xs px-3 py-1.5 ' + (lang === k ? 'on' : '') + (k === 'ta' ? ' font-tamil' : '')}>
+                                            className={'lang-pill rounded-full font-bold text-xs px-3 py-1.5 ' + (lang === k ? 'on' : '') + (k === 'ta' ? ' font-tamil' : '') + (k === 'hi' ? ' font-hindi' : '')}>
                                         {label}
                                     </button>
                                 ))}
@@ -1681,7 +1683,7 @@
                                         <span className="eyebrow">Question {idx + 1} / {questions.length}</span>
                                         <span className="vnum">Score {score}</span>
                                     </div>
-                                    <div className={'ws-card rounded-2xl px-5 py-4 mb-4 text-[15.5px] font-semibold leading-relaxed' + (lang === 'ta' ? ' font-tamil' : '')}
+                                    <div className={'ws-card rounded-2xl px-5 py-4 mb-4 text-[15.5px] font-semibold leading-relaxed' + (qlang === 'ta' ? ' font-tamil' : '') + (qlang === 'hi' ? ' font-hindi' : '')}
                                          style={{ color: 'var(--ink)' }}>{q.q}</div>
                                     <div className="space-y-2">
                                         {q.options.map((opt, i) => {
@@ -1693,7 +1695,7 @@
                                             return (
                                                 <button key={i} disabled={picked !== null}
                                                         onClick={() => { setPicked(i); if (i === q.a) setScore(s => s + 1); }}
-                                                        className={'w-full text-left rounded-xl px-4 py-3 text-sm font-semibold cursor-pointer' + (lang === 'ta' ? ' font-tamil' : '')}
+                                                        className={'w-full text-left rounded-xl px-4 py-3 text-sm font-semibold cursor-pointer' + (qlang === 'ta' ? ' font-tamil' : '') + (qlang === 'hi' ? ' font-hindi' : '')}
                                                         style={{ background: bg, border: '1.5px solid ' + bd, color: ink, transition: 'all .2s ease' }}>
                                                     {String.fromCharCode(65 + i)}.&nbsp; {opt}
                                                 </button>
@@ -2437,8 +2439,10 @@
                 const res = verses.filter(v =>
                     (v.English && String(v.English).toLowerCase().includes(lq)) ||
                     (v.Tamil && String(v.Tamil).includes(q)) ||
+                    (v.Hindi && String(v.Hindi).includes(q)) ||
                     (v.Arabic && String(v.Arabic).includes(q)) ||
-                    (v.English_Footnote && String(v.English_Footnote).toLowerCase().includes(lq))
+                    (v.English_Footnote && String(v.English_Footnote).toLowerCase().includes(lq)) ||
+                    (v.Hindi_Footnote && String(v.Hindi_Footnote).includes(q))
                 );
                 setActiveQuery(q);
                 setSearchResults(res.slice(0, 300));
