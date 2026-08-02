@@ -962,7 +962,10 @@
             try {
                 const d = await (await fetch('appendices.json')).json();
                 apxCache = [];
-                d.forEach(a => (a.paragraphs || []).forEach(t => apxCache.push({ n: a.n, title: a.title, text: t })));
+                d.forEach(a => {
+                    (a.paragraphs || []).forEach(t => apxCache.push({ n: a.n, title: a.title, text: t }));
+                    (a.paragraphs_ta || []).forEach(t => apxCache.push({ n: a.n, title: a.title_ta || a.title, text: t }));
+                });
             } catch (e) { apxCache = []; }
             return apxCache;
         }
@@ -2428,7 +2431,7 @@
                 (async () => {
                     try {
                         if (!window.__apxBook) window.__apxBook = await (await fetch(DATA_DIR + '/appendices.json')).json();
-                        setApxList(window.__apxBook.map(a => ({ n: a.n, title: a.title })));
+                        setApxList(window.__apxBook.map(a => ({ n: a.n, title: a.title, title_ta: a.title_ta })));
                     } catch (e) { setApxList([]); }
                 })();
             }, [apxOpen]);
@@ -2648,13 +2651,13 @@
                                 <Icon d={I.bookmark} size={16} /> Bookmarks <span className="ml-auto" style={{ color: 'var(--muted)' }}><Icon d={I.right} size={14} /></span>
                             </button>
                             <button className="side-link" onClick={() => openDoc('preface')}>
-                                <Icon d={I.book} size={16} /> Preface <span className="ml-auto" style={{ color: 'var(--muted)' }}><Icon d={I.right} size={14} /></span>
+                                <Icon d={I.book} size={16} /> Preface{show.ta && <span className="font-tamil" style={{ marginLeft: 6, fontSize: 12, color: 'var(--muted)' }}>· முன்னுரை</span>} <span className="ml-auto" style={{ color: 'var(--muted)' }}><Icon d={I.right} size={14} /></span>
                             </button>
                             <button className="side-link" onClick={() => openDoc('proclamation')}>
-                                <Icon d={I.book} size={16} /> Proclamation <span className="ml-auto" style={{ color: 'var(--muted)' }}><Icon d={I.right} size={14} /></span>
+                                <Icon d={I.book} size={16} /> Proclamation{show.ta && <span className="font-tamil" style={{ marginLeft: 6, fontSize: 12, color: 'var(--muted)' }}>· பிரகடனம்</span>} <span className="ml-auto" style={{ color: 'var(--muted)' }}><Icon d={I.right} size={14} /></span>
                             </button>
                             <button className="side-link" onClick={() => openDoc('introduction')}>
-                                <Icon d={I.book} size={16} /> Introduction <span className="ml-auto" style={{ color: 'var(--muted)' }}><Icon d={I.right} size={14} /></span>
+                                <Icon d={I.book} size={16} /> Introduction{show.ta && <span className="font-tamil" style={{ marginLeft: 6, fontSize: 12, color: 'var(--muted)' }}>· அறிமுகவுரை</span>} <span className="ml-auto" style={{ color: 'var(--muted)' }}><Icon d={I.right} size={14} /></span>
                             </button>
                         </div>
 
@@ -2688,7 +2691,7 @@
 
                         <div className="px-3 py-2.5 shrink-0" style={{ borderTop: '1px solid var(--line)' }}>
                             <button className="side-link" onClick={() => setApxOpen(o => !o)}>
-                                <Icon d={I.book} size={16} /> Appendices <span className="text-[11px] font-bold" style={{ color: 'var(--muted)' }}>(38)</span>
+                                <Icon d={I.book} size={16} /> Appendices{show.ta && <span className="font-tamil" style={{ marginLeft: 6, fontSize: 12, color: 'var(--muted)' }}>· பின் இணைப்புகள்</span>} <span className="text-[11px] font-bold" style={{ color: 'var(--muted)' }}>(38)</span>
                                 <span className="ml-auto" style={{ color: 'var(--muted)' }}><Icon d={apxOpen ? I.up : I.down} size={14} /></span>
                             </button>
                             {apxOpen && (
@@ -2696,7 +2699,10 @@
                                     {apxList ? apxList.map(a => (
                                         <button key={a.n} className="chap-row" onClick={() => openDoc('appendix-' + a.n)}>
                                             <span className="chap-badge">{a.n}</span>
-                                            <span className="flex-1 min-w-0 text-[12.5px] font-semibold truncate text-left" style={{ color: 'var(--ink)' }}>{a.title}</span>
+                                            <span className="flex-1 min-w-0 text-left">
+                                                <span className="block text-[12.5px] font-semibold truncate" style={{ color: 'var(--ink)' }}>{a.title}</span>
+                                                {show.ta && a.title_ta && <span className="block font-tamil text-[11px] truncate" style={{ color: 'var(--muted)' }}>{a.title_ta}</span>}
+                                            </span>
                                         </button>
                                     )) : <div className="text-[12px] px-3 py-2" style={{ color: 'var(--muted)' }}>Loading…</div>}
                                 </div>
