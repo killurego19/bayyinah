@@ -2651,13 +2651,28 @@
                                 <Icon d={I.bookmark} size={16} /> Bookmarks <span className="ml-auto" style={{ color: 'var(--muted)' }}><Icon d={I.right} size={14} /></span>
                             </button>
                             <button className="side-link" onClick={() => openDoc('preface')}>
-                                <Icon d={I.book} size={16} /> Preface{show.ta && <span className="font-tamil" style={{ marginLeft: 6, fontSize: 12, color: 'var(--muted)' }}>· முன்னுரை</span>} <span className="ml-auto" style={{ color: 'var(--muted)' }}><Icon d={I.right} size={14} /></span>
+                                <Icon d={I.book} size={16} />
+                                <span className="flex-1 min-w-0 leading-tight">
+                                    <span className="block">Preface</span>
+                                    {show.ta && <span className="block font-tamil text-[11px]" style={{ color: 'var(--muted)' }}>முன்னுரை</span>}
+                                </span>
+                                <span style={{ color: 'var(--muted)' }}><Icon d={I.right} size={14} /></span>
                             </button>
                             <button className="side-link" onClick={() => openDoc('proclamation')}>
-                                <Icon d={I.book} size={16} /> Proclamation{show.ta && <span className="font-tamil" style={{ marginLeft: 6, fontSize: 12, color: 'var(--muted)' }}>· பிரகடனம்</span>} <span className="ml-auto" style={{ color: 'var(--muted)' }}><Icon d={I.right} size={14} /></span>
+                                <Icon d={I.book} size={16} />
+                                <span className="flex-1 min-w-0 leading-tight">
+                                    <span className="block">Proclamation</span>
+                                    {show.ta && <span className="block font-tamil text-[11px]" style={{ color: 'var(--muted)' }}>பிரகடனம்</span>}
+                                </span>
+                                <span style={{ color: 'var(--muted)' }}><Icon d={I.right} size={14} /></span>
                             </button>
                             <button className="side-link" onClick={() => openDoc('introduction')}>
-                                <Icon d={I.book} size={16} /> Introduction{show.ta && <span className="font-tamil" style={{ marginLeft: 6, fontSize: 12, color: 'var(--muted)' }}>· அறிமுகவுரை</span>} <span className="ml-auto" style={{ color: 'var(--muted)' }}><Icon d={I.right} size={14} /></span>
+                                <Icon d={I.book} size={16} />
+                                <span className="flex-1 min-w-0 leading-tight">
+                                    <span className="block">Introduction</span>
+                                    {show.ta && <span className="block font-tamil text-[11px]" style={{ color: 'var(--muted)' }}>அறிமுகவுரை</span>}
+                                </span>
+                                <span style={{ color: 'var(--muted)' }}><Icon d={I.right} size={14} /></span>
                             </button>
                         </div>
 
@@ -2691,8 +2706,12 @@
 
                         <div className="px-3 py-2.5 shrink-0" style={{ borderTop: '1px solid var(--line)' }}>
                             <button className="side-link" onClick={() => setApxOpen(o => !o)}>
-                                <Icon d={I.book} size={16} /> Appendices{show.ta && <span className="font-tamil" style={{ marginLeft: 6, fontSize: 12, color: 'var(--muted)' }}>· பின் இணைப்புகள்</span>} <span className="text-[11px] font-bold" style={{ color: 'var(--muted)' }}>(38)</span>
-                                <span className="ml-auto" style={{ color: 'var(--muted)' }}><Icon d={apxOpen ? I.up : I.down} size={14} /></span>
+                                <Icon d={I.book} size={16} />
+                                <span className="flex-1 min-w-0 leading-tight">
+                                    <span className="block">Appendices <span className="text-[11px] font-bold" style={{ color: 'var(--muted)' }}>(38)</span></span>
+                                    {show.ta && <span className="block font-tamil text-[11px]" style={{ color: 'var(--muted)' }}>பின் இணைப்புகள்</span>}
+                                </span>
+                                <span style={{ color: 'var(--muted)' }}><Icon d={apxOpen ? I.up : I.down} size={14} /></span>
                             </button>
                             {apxOpen && (
                                 <div className="max-h-64 overflow-y-auto mt-1 space-y-0.5">
