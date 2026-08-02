@@ -2100,7 +2100,7 @@
                 firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider())
                     .catch(e => { if (e && e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') flash('Sign-in failed — please try again'); });
             };
-            const signOutUser = () => { if (fbReady()) firebase.auth().signOut(); };
+            const signOutUser = () => { try { localStorage.removeItem('quranGateChoice'); } catch (e) {} if (fbReady()) firebase.auth().signOut(); };
 
             useEffect(() => {
                 if (!fbReady()) return;
@@ -2188,13 +2188,14 @@
 
             const ttsAudioRef = useRef(null);
             const [audioWord, setAudioWord] = useState(null);
+            const [shareV, setShareV] = useState(null);
 
             const stopAudio = useCallback(() => {
                 playTokenRef.current++;
                 continuousRef.current = false;
                 setContinuous(false);
-                if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = ''; }
-                if (ttsAudioRef.current) { ttsAudioRef.current.pause(); ttsAudioRef.current.src = ''; }
+                if (audioRef.current) { const a = audioRef.current; a.onended = a.onerror = a.onpause = a.ontimeupdate = null; a.pause(); a.src = ''; audioRef.current = null; }
+                if (ttsAudioRef.current) { const t = ttsAudioRef.current; t.onended = t.onerror = t.onpause = null; t.pause(); t.src = ''; ttsAudioRef.current = null; }
                 try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) {}
                 setAudioWord(null);
                 setPlaying(null);
@@ -2247,6 +2248,7 @@
                 let usedFallback = false;
                 audio.onended = resolve;
                 audio.onerror = () => {
+                    if (playTokenRef.current !== token) return resolve();   // stopped/superseded — don't restart
                     if (!usedFallback) { usedFallback = true; audio.src = qariUrl(s, a); audio.load(); audio.play().catch(resolve); }
                     else resolve();
                 };
@@ -2359,15 +2361,19 @@
                 setSearchResults(null);
                 setView('reader');
                 setCurrentSurah(s);
-                setTimeout(() => {
+                let tries = 0;
+                const tryScroll = () => {
                     const el = document.getElementById(`v-${s}-${a}`);
                     if (el) {
                         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                         el.style.outline = '2px solid var(--gold)';
                         el.style.outlineOffset = '3px';
                         setTimeout(() => { el.style.outline = 'none'; }, 2400);
+                    } else if (tries++ < 50) {
+                        setTimeout(tryScroll, 100);   // wait for the chapter to finish rendering (up to ~5s)
                     }
-                }, wbwCache[s] ? 250 : 800);
+                };
+                setTimeout(tryScroll, 60);
             }, []);
 
 
@@ -2490,7 +2496,14 @@
                 navigator.clipboard.writeText(buildVerseText(v)).then(() => flash('Verse copied'));
             };
             const shareVerse = v => {
-                window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(buildVerseText(v))}`, '_blank');
+                const text = buildVerseText(v);
+                const url = location.origin + location.pathname;
+                // On phones, prefer the native share sheet (covers every installed app)
+                if (navigator.share) {
+                    navigator.share({ title: `Quran ${v.Surah}:${v.Ayah}`, text, url }).catch(() => {});
+                    return;
+                }
+                setShareV(v);   // desktop / no native share → show our own menu
             };
             const showRandom = () => {
                 const pool = verses.filter(v => Number(v.Ayah) > 0);
@@ -3385,6 +3398,43 @@
                         </div>
                     )}
 
+                    {/* ── Share sheet (desktop / no native share) ── */}
+                    {shareV && (() => {
+                        const text = buildVerseText(shareV);
+                        const url = location.origin + location.pathname;
+                        const et = encodeURIComponent(text), eu = encodeURIComponent(url);
+                        const targets = [
+                            { k: 'wa', label: 'WhatsApp', href: `https://api.whatsapp.com/send?text=${et}` },
+                            { k: 'tg', label: 'Telegram', href: `https://t.me/share/url?url=${eu}&text=${et}` },
+                            { k: 'fb', label: 'Facebook', href: `https://www.facebook.com/sharer/sharer.php?u=${eu}&quote=${et}` },
+                            { k: 'x', label: 'X (Twitter)', href: `https://twitter.com/intent/tweet?text=${et}` },
+                        ];
+                        return (
+                            <div className="fixed inset-0 z-[75] flex items-center justify-center p-4" onClick={() => setShareV(null)}>
+                                <div className="absolute inset-0" style={{ background: 'rgba(20,14,8,.45)', backdropFilter: 'blur(2px)' }}></div>
+                                <div onClick={e => e.stopPropagation()}
+                                     className="fade-in relative w-full max-w-sm rounded-3xl p-6"
+                                     style={{ background: 'var(--bg-soft)', boxShadow: 'var(--shadow-lg)', border: '1px solid var(--line)' }}>
+                                    <div className="eyebrow mb-4">Share verse · {shareV.Surah}:{shareV.Ayah}</div>
+                                    <div className="grid grid-cols-2 gap-2.5">
+                                        {targets.map(t => (
+                                            <a key={t.k} href={t.href} target="_blank" rel="noopener noreferrer"
+                                               onClick={() => setShareV(null)}
+                                               className="lang-pill text-center py-3 rounded-2xl text-sm font-bold cursor-pointer">
+                                                {t.label}
+                                            </a>
+                                        ))}
+                                    </div>
+                                    <button className="w-full mt-2.5 py-3 rounded-2xl text-sm font-bold cursor-pointer"
+                                            style={{ background: 'var(--accent)', color: 'var(--bg-soft)', border: 'none' }}
+                                            onClick={() => { navigator.clipboard.writeText(text).then(() => flash('Verse copied')); setShareV(null); }}>
+                                        Copy text
+                                    </button>
+                                </div>
+                            </div>
+                        );
+                    })()}
+
                     {/* ── Toast ── */}
                     {toast && (
                         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[80] fade-in px-5 py-2.5 rounded-full text-sm font-semibold flex items-center gap-2"
@@ -3490,8 +3540,8 @@
       (function(){
         var gate=document.getElementById('qgate'); if(!gate) return;
         var KEY='quranGateChoice';
-        var dismissed=false; try{ dismissed=localStorage.getItem(KEY)==='guest'; }catch(e){}
-        if(dismissed){ return; }               // returning guest — never gate again
+        var choice=null; try{ choice=localStorage.getItem(KEY); }catch(e){}
+        if(choice==='guest' || choice==='user'){ return; }   // returning guest or signed-in user — never gate again
         gate.style.display='flex';
         document.documentElement.style.overflow='hidden';
         function hide(){ gate.classList.add('gone'); document.documentElement.style.overflow=''; setTimeout(function(){ gate.style.display='none'; }, 550); }
@@ -3502,7 +3552,7 @@
           firebase.auth().onAuthStateChanged(function(u){
             if(decided){ if(u) hide(); return; }
             decided=true;
-            if(u){ hide(); } else { ready(); }        // logged in (incl. from homepage) enters straight in
+            if(u){ try{localStorage.setItem(KEY,'user');}catch(e){} hide(); } else { ready(); }   // remember login → skip gate next time
           });
           setTimeout(function(){ if(!decided){ decided=true; ready(); } }, 3000);  // fallback if auth stalls
           document.getElementById('qgateLogin').addEventListener('click', function(){
