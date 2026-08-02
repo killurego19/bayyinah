@@ -2394,13 +2394,22 @@
                             if (!window.__apxBook) window.__apxBook = await (await fetch(DATA_DIR + '/appendices.json')).json();
                             const n = Number(id.slice(9));
                             const a = window.__apxBook.find(x => Number(x.n) === n);
-                            window.__docCache[id] = {
-                                id: id,
+                            const enDoc = {
                                 eyebrow: 'Appendix ' + n + ' of 38 — Rashad Khalifa',
                                 title: a.title,
                                 subtitle: '',
                                 sections: [{ items: (a.paragraphs || []).map(t => ({ t: 'p', text: t })) }]
                             };
+                            if (a.paragraphs_ta && a.paragraphs_ta.length) {
+                                window.__docCache[id] = { id: id, multi: { en: enDoc, ta: {
+                                    eyebrow: 'பின் இணைப்பு ' + n + ' / 38 — ரஷாத் கலீஃபா',
+                                    title: a.title_ta || a.title,
+                                    subtitle: '',
+                                    sections: [{ items: a.paragraphs_ta.map(t => ({ t: 'p', text: t })) }]
+                                } } };
+                            } else {
+                                window.__docCache[id] = Object.assign({ id: id }, enDoc);
+                            }
                         } else {
                             window.__docCache[id] = await (await fetch('docs/' + id + '.json')).json();
                         }
