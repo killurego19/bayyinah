@@ -2385,6 +2385,7 @@
                 setDocId(id); setDocData(null); setDocLoading(true);
                 setSearchResults(null); setWordSel(null);
                 setView('doc');
+                setDocLang(show && show.ta ? 'ta' : 'en');   // open in the reader's language
                 window.scrollTo({ top: 0 });
                 if (window.innerWidth < 1024) setSidebarOpen(false);
                 try {
