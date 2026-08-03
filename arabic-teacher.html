@@ -1,0 +1,429 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bayyinah — Arabic Teacher</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Marcellus&family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Tamil:wght@400;600;700&family=Noto+Sans+Devanagari:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/@babel/standalone@7.25.6/babel.min.js"></script>
+<style>
+  :root{
+    --bg:#f5f2ea; --bg2:#fffdf8; --ink:#17203a; --ink2:#3d476a; --muted:#6f7897;
+    --line:#e6e0d1; --lapis:#2c50b0; --lapis2:#3f66c8; --gold:#b98a1e; --gold2:#d9b25a;
+    --emerald:#1f7a5a; --card:#ffffff; --shadow:0 20px 50px -28px rgba(20,20,40,.4);
+  }
+  html.dark{
+    --bg:#0c1226; --bg2:#121a34; --ink:#eef1fb; --ink2:#c3cde9; --muted:#8b97bb;
+    --line:#222c4d; --lapis:#8fa9f4; --lapis2:#7f9bf0; --gold:#e2c072; --gold2:#caa858;
+    --emerald:#54c39a; --card:#141d38; --shadow:0 20px 50px -26px rgba(0,0,0,.7);
+  }
+  *{-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif;transition:background .4s,color .4s}
+  .ar{font-family:'Amiri',serif;direction:rtl}
+  .disp{font-family:'Marcellus',serif;font-weight:400}
+  .ta{font-family:'Noto Sans Tamil',sans-serif}
+  .hi{font-family:'Noto Sans Devanagari',sans-serif}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:20px}
+  .btn{cursor:pointer;border:none;font-family:inherit;font-weight:600;transition:transform .18s,box-shadow .18s,background .2s}
+  .btn:active{transform:scale(.97)}
+  .pri{background:linear-gradient(135deg,var(--lapis2),var(--lapis));color:#fff;box-shadow:0 12px 26px -12px color-mix(in srgb,var(--lapis) 85%,transparent)}
+  html.dark .pri{color:#0a1130}
+  .ghost{background:transparent;color:var(--ink2);border:1px solid var(--line)}
+  .pill{background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:999px;font-weight:700}
+  .pill.on{background:linear-gradient(135deg,var(--gold2),var(--gold));color:#3a2c05;border-color:transparent}
+  .lcell{background:var(--card);border:1px solid var(--line);border-radius:16px;cursor:pointer;transition:transform .16s,border-color .2s,box-shadow .2s}
+  .lcell:hover{transform:translateY(-3px);border-color:var(--gold2);box-shadow:var(--shadow)}
+  .lcell.done{border-color:color-mix(in srgb,var(--emerald) 55%,transparent)}
+  .fade{animation:fade .35s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .sheet{animation:sheet .3s cubic-bezier(.2,.8,.2,1)}
+  @keyframes sheet{from{opacity:0;transform:translateY(20px) scale(.98)}to{opacity:1;transform:none}}
+  ::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:var(--line);border-radius:99px}
+</style>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useMemo, useRef } = React;
+const ZWJ = '‍';
+
+/* ─────────────── i18n ─────────────── */
+const T = {
+  en: {
+    brand:'Arabic Teacher', tagline:'Learn to read the Quran — from the very first letter to understanding the words.',
+    path:'Path', alphabet:'Alphabet', vowels:'Vowels', practice:'Practice',
+    yourpath:'Your learning path', pathsub:'Take it step by step. Everything you learn is drawn from the words of the Quran.',
+    l1:'The Alphabet', l1d:'The 28 Arabic letters — their names, sounds, and how they change shape in a word.',
+    l2:'Short Vowels (Harakāt)', l2d:'The marks that tell you how to read each letter: a, i, u, and more.',
+    l3:'Practice', l3d:'Test yourself — match each letter to its name.',
+    soon:'Coming soon', l4:'Common Words', l4d:'The most frequent Quranic words — learn a few hundred and understand most of the Quran.',
+    l5:'Roots', l5d:'See how one 3-letter root grows into a family of words.',
+    start:'Start', review:'Review', learned:'learned', of:'of', letters:'letters',
+    alphatitle:'The Arabic Alphabet', alphasub:'Tap any letter to hear it and learn its forms.',
+    sound:'Sound', example:'Example word', forms:'How it changes shape', iso:'Alone', ini:'Start', med:'Middle', fin:'End',
+    listen:'Listen', marklearned:'Mark as learned', doneL:'Learned ✓', close:'Close',
+    voweltitle:'Short Vowels — Harakāt', vowelsub:'Arabic letters carry small marks that give them their vowel sound. Here they sit on the letter bā (ب).',
+    practitle:'Practice — Name the Letter', pracsub:'Which name matches this letter?',
+    q:'Question', score:'Score', correct:'Correct!', tryagain:'Not quite — the answer is highlighted.', next:'Next', restart:'Restart', done:'Done!', youscored:'You scored',
+    audionote:'Tip: audio uses your device’s built-in Arabic voice. If you hear nothing, your device may not have an Arabic voice installed yet.',
+    footer:'Bayyinah — Arabic Teacher · a free tool to read and understand the Quran',
+    langname:'English',
+  },
+  ta: {
+    brand:'அரபி ஆசிரியர்', tagline:'குர்ஆனை வாசிக்கக் கற்றுக்கொள்ளுங்கள் — முதல் எழுத்திலிருந்து வார்த்தைகளைப் புரிந்துகொள்வது வரை.',
+    path:'பாதை', alphabet:'எழுத்துக்கள்', vowels:'உயிர்க்குறிகள்', practice:'பயிற்சி',
+    yourpath:'உங்கள் கற்றல் பாதை', pathsub:'படிப்படியாக கற்றுக்கொள்ளுங்கள். நீங்கள் கற்பது அனைத்தும் குர்ஆனின் வார்த்தைகளிலிருந்தே எடுக்கப்பட்டவை.',
+    l1:'எழுத்துக்கள் (அகரவரிசை)', l1d:'28 அரபி எழுத்துக்கள் — அவற்றின் பெயர்கள், ஒலிகள், வார்த்தையில் அவை எப்படி வடிவம் மாறுகின்றன.',
+    l2:'குறு உயிர்க்குறிகள் (ஹரகாத்)', l2d:'ஒவ்வொரு எழுத்தையும் எப்படி வாசிப்பது என்பதைக் காட்டும் குறிகள்: a, i, u மேலும்.',
+    l3:'பயிற்சி', l3d:'உங்களைச் சோதித்துக் கொள்ளுங்கள் — ஒவ்வொரு எழுத்தையும் அதன் பெயருடன் பொருத்துங்கள்.',
+    soon:'விரைவில்', l4:'பொதுவான வார்த்தைகள்', l4d:'அதிகம் வரும் குர்ஆன் வார்த்தைகள் — சில நூறு கற்றால் குர்ஆனின் பெரும்பகுதியைப் புரிந்துகொள்ளலாம்.',
+    l5:'மூலச்சொற்கள் (Roots)', l5d:'ஒரு 3-எழுத்து மூலம் எப்படி பல வார்த்தைகளாக வளர்கிறது என்பதைக் காணுங்கள்.',
+    start:'தொடங்கு', review:'மீள்பார்வை', learned:'கற்றது', of:'/', letters:'எழுத்துக்கள்',
+    alphatitle:'அரபி எழுத்துக்கள்', alphasub:'எந்த எழுத்தையும் தட்டி ஒலியைக் கேளுங்கள், வடிவங்களைக் கற்றுக்கொள்ளுங்கள்.',
+    sound:'ஒலி', example:'எடுத்துக்காட்டு வார்த்தை', forms:'வடிவம் எப்படி மாறுகிறது', iso:'தனித்து', ini:'ஆரம்பம்', med:'நடு', fin:'இறுதி',
+    listen:'கேளுங்கள்', marklearned:'கற்றதாகக் குறி', doneL:'கற்றுவிட்டேன் ✓', close:'மூடு',
+    voweltitle:'குறு உயிர்க்குறிகள் — ஹரகாத்', vowelsub:'அரபி எழுத்துக்கள் சிறு குறிகளைச் சுமக்கின்றன; அவை உயிரொலியைத் தருகின்றன. இங்கே அவை பா (ب) எழுத்தின் மேல் உள்ளன.',
+    practitle:'பயிற்சி — எழுத்தின் பெயர்', pracsub:'இந்த எழுத்துக்கு எந்தப் பெயர் பொருந்தும்?',
+    q:'கேள்வி', score:'மதிப்பெண்', correct:'சரி!', tryagain:'இல்லை — சரியான பதில் காட்டப்பட்டுள்ளது.', next:'அடுத்து', restart:'மீண்டும்', done:'முடிந்தது!', youscored:'உங்கள் மதிப்பெண்',
+    audionote:'குறிப்பு: ஒலி உங்கள் சாதனத்தின் அரபி குரலைப் பயன்படுத்துகிறது. ஒலி கேட்கவில்லை எனில், உங்கள் சாதனத்தில் அரபி குரல் நிறுவப்படாமல் இருக்கலாம்.',
+    footer:'பய்யினா — அரபி ஆசிரியர் · குர்ஆனை வாசித்துப் புரிந்துகொள்ள ஒரு இலவசக் கருவி',
+    langname:'தமிழ்',
+  },
+  hi: {
+    brand:'अरबी शिक्षक', tagline:'क़ुरआन पढ़ना सीखें — पहले अक्षर से लेकर शब्दों को समझने तक।',
+    path:'मार्ग', alphabet:'अक्षर', vowels:'स्वर-चिह्न', practice:'अभ्यास',
+    yourpath:'आपका सीखने का मार्ग', pathsub:'क़दम-दर-क़दम सीखें। जो कुछ आप सीखते हैं वह क़ुरआन के शब्दों से लिया गया है।',
+    l1:'अक्षरमाला', l1d:'28 अरबी अक्षर — उनके नाम, ध्वनियाँ, और शब्द में उनका रूप कैसे बदलता है।',
+    l2:'लघु स्वर (हरकात)', l2d:'वे चिह्न जो बताते हैं कि हर अक्षर को कैसे पढ़ें: a, i, u और अधिक।',
+    l3:'अभ्यास', l3d:'ख़ुद को परखें — हर अक्षर को उसके नाम से मिलाएँ।',
+    soon:'जल्द आ रहा है', l4:'आम शब्द', l4d:'सबसे अधिक आने वाले क़ुरआनी शब्द — कुछ सौ सीखें और अधिकांश क़ुरआन समझें।',
+    l5:'मूल (Roots)', l5d:'देखें कि कैसे एक 3-अक्षर मूल से शब्दों का एक परिवार बनता है।',
+    start:'शुरू करें', review:'दोहराएँ', learned:'सीखे', of:'/', letters:'अक्षर',
+    alphatitle:'अरबी अक्षरमाला', alphasub:'किसी भी अक्षर पर टैप करके उसे सुनें और उसके रूप सीखें।',
+    sound:'ध्वनि', example:'उदाहरण शब्द', forms:'रूप कैसे बदलता है', iso:'अकेला', ini:'शुरू', med:'बीच', fin:'अंत',
+    listen:'सुनें', marklearned:'सीखा हुआ चिह्नित करें', doneL:'सीख लिया ✓', close:'बंद करें',
+    voweltitle:'लघु स्वर — हरकात', vowelsub:'अरबी अक्षरों पर छोटे चिह्न होते हैं जो उन्हें स्वर-ध्वनि देते हैं। यहाँ वे बा (ب) अक्षर पर हैं।',
+    practitle:'अभ्यास — अक्षर का नाम', pracsub:'इस अक्षर से कौन-सा नाम मेल खाता है?',
+    q:'प्रश्न', score:'अंक', correct:'सही!', tryagain:'बिलकुल नहीं — सही उत्तर चिह्नित है।', next:'अगला', restart:'फिर से', done:'हो गया!', youscored:'आपके अंक',
+    audionote:'सुझाव: ऑडियो आपके डिवाइस की अरबी आवाज़ का उपयोग करता है। यदि कुछ सुनाई न दे, तो शायद आपके डिवाइस में अरबी आवाज़ इंस्टॉल न हो।',
+    footer:'बय्यिना — अरबी शिक्षक · क़ुरआन पढ़ने और समझने का एक मुफ़्त साधन',
+    langname:'हिन्दी',
+  },
+};
+
+/* ─────────────── letter data (name in en/ta/hi + example Quranic word) ─────────────── */
+// c=char, n/nt/nh=name, s=sound(romanized), ex=example arabic, tr=translit, e/eta/ehi=meaning
+const L = [
+  {c:'ا',n:'Alif',nt:'அலிஃப்',nh:'अलिफ़',s:'a / ā',ex:'اللّٰه',tr:'Allāh',e:'God',eta:'கடவுள்',ehi:'ईश्वर (अल्लाह)'},
+  {c:'ب',n:'Bā',nt:'பா',nh:'बा',s:'b',ex:'بِسْم',tr:'bism',e:'in the name (of)',eta:'பெயரால்',ehi:'नाम से'},
+  {c:'ت',n:'Tā',nt:'தா',nh:'ता',s:'t',ex:'كِتَاب',tr:'kitāb',e:'book',eta:'புத்தகம்',ehi:'किताब'},
+  {c:'ث',n:'Thā',nt:'ஸா (th)',nh:'सा (th)',s:'th (think)',ex:'ثَلَاث',tr:'thalāth',e:'three',eta:'மூன்று',ehi:'तीन'},
+  {c:'ج',n:'Jīm',nt:'ஜீம்',nh:'जीम',s:'j',ex:'جَنَّة',tr:'jannah',e:'paradise / garden',eta:'சொர்க்கம்',ehi:'स्वर्ग (जन्नत)'},
+  {c:'ح',n:'Ḥā',nt:'ஹா (H)',nh:'हा (H)',s:'ḥ (deep h)',ex:'حَمْد',tr:'ḥamd',e:'praise',eta:'புகழ்',ehi:'प्रशंसा (हम्द)'},
+  {c:'خ',n:'Khā',nt:'கா (kh)',nh:'ख़ा',s:'kh (loch)',ex:'خَيْر',tr:'khayr',e:'goodness',eta:'நன்மை',ehi:'भलाई (ख़ैर)'},
+  {c:'د',n:'Dāl',nt:'தால்',nh:'दाल',s:'d',ex:'دِين',tr:'dīn',e:'religion',eta:'மார்க்கம்',ehi:'धर्म (दीन)'},
+  {c:'ذ',n:'Dhāl',nt:'தால் (dh)',nh:'ज़ाल',s:'dh (this)',ex:'ذِكْر',tr:'dhikr',e:'remembrance',eta:'நினைவுகூர்தல்',ehi:'स्मरण (ज़िक्र)'},
+  {c:'ر',n:'Rā',nt:'ரா',nh:'रा',s:'r (rolled)',ex:'رَبّ',tr:'rabb',e:'Lord',eta:'இறைவன்',ehi:'प्रभु (रब)'},
+  {c:'ز',n:'Zāy',nt:'ஜாய்',nh:'ज़ाय',s:'z',ex:'زَكَاة',tr:'zakāh',e:'charity',eta:'தான தர்மம்',ehi:'दान (ज़कात)'},
+  {c:'س',n:'Sīn',nt:'ஸீன்',nh:'सीन',s:'s',ex:'سَلَام',tr:'salām',e:'peace',eta:'அமைதி',ehi:'शांति (सलाम)'},
+  {c:'ش',n:'Shīn',nt:'ஷீன்',nh:'शीन',s:'sh',ex:'شَمْس',tr:'shams',e:'sun',eta:'சூரியன்',ehi:'सूरज (शम्स)'},
+  {c:'ص',n:'Ṣād',nt:'ஸாத்',nh:'साद',s:'ṣ (heavy s)',ex:'صَلَاة',tr:'ṣalāh',e:'prayer',eta:'தொழுகை',ehi:'नमाज़ (सलात)'},
+  {c:'ض',n:'Ḍād',nt:'ளாத்',nh:'ज़ाद',s:'ḍ (heavy d)',ex:'أَرْض',tr:'arḍ',e:'earth',eta:'பூமி',ehi:'धरती (ज़मीन)'},
+  {c:'ط',n:'Ṭā',nt:'தா (T)',nh:'ता (T)',s:'ṭ (heavy t)',ex:'طَيِّب',tr:'ṭayyib',e:'good / pure',eta:'தூய்மையான',ehi:'पवित्र (तय्यिब)'},
+  {c:'ظ',n:'Ẓā',nt:'ளா (Z)',nh:'ज़ा (Z)',s:'ẓ (heavy dh)',ex:'ظِلّ',tr:'ẓill',e:'shade',eta:'நிழல்',ehi:'छाया (ज़िल)'},
+  {c:'ع',n:'ʿAyn',nt:'ஐன்',nh:'ऐन',s:'ʿ (throat)',ex:'عِلْم',tr:'ʿilm',e:'knowledge',eta:'அறிவு',ehi:'ज्ञान (इल्म)'},
+  {c:'غ',n:'Ghayn',nt:'கைன் (gh)',nh:'ग़ैन',s:'gh (gargle)',ex:'غَفُور',tr:'ghafūr',e:'forgiving',eta:'மன்னிப்பவன்',ehi:'क्षमाशील (ग़फ़ूर)'},
+  {c:'ف',n:'Fā',nt:'ஃபா',nh:'फ़ा',s:'f',ex:'فَجْر',tr:'fajr',e:'dawn',eta:'விடியல்',ehi:'भोर (फ़ज्र)'},
+  {c:'ق',n:'Qāf',nt:'காஃப் (Q)',nh:'क़ाफ़',s:'q (deep k)',ex:'قَلْب',tr:'qalb',e:'heart',eta:'இதயம்',ehi:'दिल (क़ल्ब)'},
+  {c:'ك',n:'Kāf',nt:'காஃப்',nh:'काफ़',s:'k',ex:'كَلِمَة',tr:'kalimah',e:'word',eta:'சொல்',ehi:'शब्द (कलिमा)'},
+  {c:'ل',n:'Lām',nt:'லாம்',nh:'लाम',s:'l',ex:'لَيْل',tr:'layl',e:'night',eta:'இரவு',ehi:'रात (लैल)'},
+  {c:'م',n:'Mīm',nt:'மீம்',nh:'मीम',s:'m',ex:'مَاء',tr:'māʾ',e:'water',eta:'தண்ணீர்',ehi:'पानी (मा)'},
+  {c:'ن',n:'Nūn',nt:'நூன்',nh:'नून',s:'n',ex:'نُور',tr:'nūr',e:'light',eta:'ஒளி',ehi:'प्रकाश (नूर)'},
+  {c:'ه',n:'Hā',nt:'ஹா',nh:'हा',s:'h',ex:'هُدَى',tr:'hudā',e:'guidance',eta:'நேர்வழி',ehi:'मार्गदर्शन (हुदा)'},
+  {c:'و',n:'Wāw',nt:'வாவ்',nh:'वाव',s:'w / ū',ex:'وَحْي',tr:'waḥy',e:'revelation',eta:'வெளிப்பாடு',ehi:'प्रकाशना (वह्य)'},
+  {c:'ي',n:'Yā',nt:'யா',nh:'या',s:'y / ī',ex:'يَوْم',tr:'yawm',e:'day',eta:'நாள்',ehi:'दिन (यौम)'},
+];
+
+const HARAKAT = [
+  {sym:'بَ',name:'Fatḥa',s:'"a" (as in cup)',de:'A small stroke above the letter → short "a".',dt:'எழுத்தின் மேல் ஒரு சிறு கோடு → குறு "a".',dh:'अक्षर के ऊपर एक छोटी रेखा → लघु "a"।'},
+  {sym:'بِ',name:'Kasra',s:'"i" (as in sit)',de:'A small stroke below the letter → short "i".',dt:'எழுத்தின் கீழ் ஒரு சிறு கோடு → குறு "i".',dh:'अक्षर के नीचे एक छोटी रेखा → लघु "i"।'},
+  {sym:'بُ',name:'Ḍamma',s:'"u" (as in put)',de:'A small "و" above the letter → short "u".',dt:'எழுத்தின் மேல் சிறிய "و" → குறு "u".',dh:'अक्षर के ऊपर छोटा "و" → लघु "u"।'},
+  {sym:'بْ',name:'Sukūn',s:'no vowel',de:'A small circle → the letter has no vowel (a stop).',dt:'ஒரு சிறு வட்டம் → எழுத்துக்கு உயிரொலி இல்லை.',dh:'एक छोटा वृत्त → अक्षर पर कोई स्वर नहीं।'},
+  {sym:'بّ',name:'Shadda',s:'double the letter',de:'A small "w" shape → the letter is doubled (stressed).',dt:'சிறிய "w" வடிவம் → எழுத்து இரட்டிப்பாகிறது.',dh:'छोटा "w" आकार → अक्षर दोगुना (बल के साथ)।'},
+  {sym:'بً',name:'Tanwīn',s:'"-an / -in / -un"',de:'Double marks at a word’s end → an "n" sound (an/in/un).',dt:'வார்த்தையின் இறுதியில் இரட்டைக் குறிகள் → "n" ஒலி (an/in/un).',dh:'शब्द के अंत में दोहरे चिह्न → "n" ध्वनि (an/in/un)।'},
+];
+
+/* ─────────────── audio (Web Speech) ─────────────── */
+function speak(text){
+  try{
+    if(!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang='ar-SA'; u.rate=.8;
+    const v=(window.speechSynthesis.getVoices()||[]).find(x=>/ar/i.test(x.lang));
+    if(v) u.voice=v;
+    window.speechSynthesis.speak(u);
+  }catch(e){}
+}
+
+function forms(c){ return { iso:c, ini:c+ZWJ, med:ZWJ+c+ZWJ, fin:ZWJ+c }; }
+
+/* ─────────────── app ─────────────── */
+function App(){
+  const [lang,setLang]=useState(()=>localStorage.getItem('atLang')||'en');
+  const [dark,setDark]=useState(()=>localStorage.getItem('atDark')==='1');
+  const [tab,setTab]=useState('path');
+  const [sel,setSel]=useState(null);
+  const [done,setDone]=useState(()=>{ try{return new Set(JSON.parse(localStorage.getItem('atLearned')||'[]'))}catch(e){return new Set()} });
+  const t=T[lang];
+  const scr = lang==='ta'?'ta':lang==='hi'?'hi':'';
+
+  useEffect(()=>{ localStorage.setItem('atLang',lang); },[lang]);
+  useEffect(()=>{ localStorage.setItem('atDark',dark?'1':'0'); document.documentElement.classList.toggle('dark',dark); },[dark]);
+  useEffect(()=>{ if(window.speechSynthesis) window.speechSynthesis.getVoices(); },[]);
+
+  const nameOf = l => lang==='ta'?l.nt : lang==='hi'?l.nh : l.n;
+  const meanOf = l => lang==='ta'?l.eta : lang==='hi'?l.ehi : l.e;
+  const toggleDone = c => setDone(prev=>{ const n=new Set(prev); n.has(c)?n.delete(c):n.add(c); localStorage.setItem('atLearned',JSON.stringify([...n])); return n; });
+
+  const NAV=[['path',t.path],['alphabet',t.alphabet],['vowels',t.vowels],['practice',t.practice]];
+
+  return (
+    <div className="min-h-screen">
+      {/* header */}
+      <header className="sticky top-0 z-40" style={{background:'color-mix(in srgb,var(--bg) 88%,transparent)',backdropFilter:'blur(10px)',borderBottom:'1px solid var(--line)'}}>
+        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="ar disp" style={{fontSize:26,color:'var(--gold)',lineHeight:1}}>ب</div>
+            <div className="min-w-0">
+              <div className={"disp truncate "+scr} style={{fontSize:18,color:'var(--ink)',lineHeight:1.05}}>Bayyinah <span style={{color:'var(--muted)'}}>· {t.brand}</span></div>
+            </div>
+          </div>
+          <div className="ml-auto flex items-center gap-1.5">
+            {['en','ta','hi'].map(k=>(
+              <button key={k} onClick={()=>setLang(k)} className={"btn pill px-3 py-1.5 text-[12.5px] "+(k==='ta'?'ta':k==='hi'?'hi':'')+(lang===k?' on':'')}>{T[k].langname}</button>
+            ))}
+            <button onClick={()=>setDark(d=>!d)} className="btn pill px-2.5 py-1.5 text-[13px]" title="Day / Night">{dark?'☀️':'🌙'}</button>
+          </div>
+        </div>
+        <div className="max-w-5xl mx-auto px-4 pb-2 flex gap-1 overflow-x-auto">
+          {NAV.map(([k,label])=>(
+            <button key={k} onClick={()=>setTab(k)} className={"btn px-3.5 py-1.5 rounded-full text-[13.5px] whitespace-nowrap "+scr+(tab===k?' pri':' ghost')}>{label}</button>
+          ))}
+        </div>
+      </header>
+
+      <main className="max-w-5xl mx-auto px-4 py-6">
+        {tab==='path' && <Path t={t} scr={scr} setTab={setTab} doneCount={done.size} total={L.length}/>}
+        {tab==='alphabet' && <Alphabet t={t} scr={scr} L={L} nameOf={nameOf} done={done} onSel={setSel}/>}
+        {tab==='vowels' && <Vowels t={t} scr={scr} lang={lang}/>}
+        {tab==='practice' && <Practice t={t} scr={scr} L={L} nameOf={nameOf}/>}
+      </main>
+
+      {sel && <LetterSheet l={sel} t={t} scr={scr} nameOf={nameOf} meanOf={meanOf} done={done} toggleDone={toggleDone} onClose={()=>setSel(null)}/>}
+
+      <footer className={"max-w-5xl mx-auto px-4 py-8 text-center text-[12.5px] "+scr} style={{color:'var(--muted)'}}>
+        <div style={{borderTop:'1px solid var(--line)',paddingTop:16}}>{t.footer}</div>
+      </footer>
+    </div>
+  );
+}
+
+function Card({children,className='',...p}){ return <div className={"card "+className} {...p}>{children}</div>; }
+
+function Path({t,scr,setTab,doneCount,total}){
+  const pct=Math.round(doneCount/total*100);
+  const rows=[
+    {k:'alphabet',n:'1',title:t.l1,d:t.l1d,go:t.start,active:true,tab:'alphabet'},
+    {k:'vowels',n:'2',title:t.l2,d:t.l2d,go:t.start,active:true,tab:'vowels'},
+    {k:'practice',n:'3',title:t.l3,d:t.l3d,go:t.review,active:true,tab:'practice'},
+    {k:'words',n:'4',title:t.l4,d:t.l4d,soon:true},
+    {k:'roots',n:'5',title:t.l5,d:t.l5d,soon:true},
+  ];
+  return (
+    <div className="fade">
+      <div className="text-center mb-7">
+        <div className="ar" style={{fontSize:'clamp(30px,7vw,46px)',color:'var(--gold)'}}>بِسْمِ اللّٰهِ</div>
+        <h1 className={"disp mt-2 "+scr} style={{fontSize:'clamp(24px,5vw,34px)'}}>{t.yourpath}</h1>
+        <p className={"mt-1 "+scr} style={{color:'var(--muted)',maxWidth:560,margin:'8px auto 0'}}>{t.pathsub}</p>
+      </div>
+      <Card className="p-4 mb-5 flex items-center gap-4">
+        <div style={{position:'relative',width:52,height:52,flex:'none'}}>
+          <svg width="52" height="52" viewBox="0 0 52 52"><circle cx="26" cy="26" r="22" fill="none" stroke="var(--line)" strokeWidth="6"/><circle cx="26" cy="26" r="22" fill="none" stroke="var(--emerald)" strokeWidth="6" strokeLinecap="round" strokeDasharray={2*Math.PI*22} strokeDashoffset={2*Math.PI*22*(1-doneCount/total)} transform="rotate(-90 26 26)"/></svg>
+          <div style={{position:'absolute',inset:0,display:'grid',placeItems:'center',fontWeight:800,fontSize:13}}>{pct}%</div>
+        </div>
+        <div className={scr}>
+          <div style={{fontWeight:700}}>{doneCount} {t.of} {total} {t.letters} {t.learned}</div>
+          <div style={{color:'var(--muted)',fontSize:13}}>{t.l1}</div>
+        </div>
+      </Card>
+      <div className="grid gap-3">
+        {rows.map(r=>(
+          <Card key={r.k} className="p-4 flex items-center gap-4" style={r.soon?{opacity:.62}:{}}>
+            <div className="disp" style={{width:42,height:42,flex:'none',borderRadius:12,display:'grid',placeItems:'center',fontSize:19,background:r.soon?'var(--line)':'linear-gradient(135deg,var(--gold2),var(--gold))',color:r.soon?'var(--muted)':'#3a2c05'}}>{r.n}</div>
+            <div className="min-w-0 flex-1">
+              <div className={"font-semibold "+scr} style={{color:'var(--ink)'}}>{r.title}{r.soon && <span className={"ml-2 text-[11px] "+scr} style={{color:'var(--gold)'}}>· {t.soon}</span>}</div>
+              <div className={"text-[13px] "+scr} style={{color:'var(--muted)'}}>{r.d}</div>
+            </div>
+            {!r.soon && <button onClick={()=>setTab(r.tab)} className={"btn pri px-4 py-2 rounded-full text-[13.5px] shrink-0 "+scr}>{r.go}</button>}
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Alphabet({t,scr,L,nameOf,done,onSel}){
+  return (
+    <div className="fade">
+      <h1 className={"disp "+scr} style={{fontSize:'clamp(22px,4vw,30px)'}}>{t.alphatitle}</h1>
+      <p className={"mb-4 "+scr} style={{color:'var(--muted)'}}>{t.alphasub}</p>
+      <div className="grid gap-2.5" style={{gridTemplateColumns:'repeat(auto-fill,minmax(88px,1fr))'}}>
+        {L.map(l=>(
+          <button key={l.c} onClick={()=>onSel(l)} className={"lcell p-2.5 text-center "+(done.has(l.c)?'done':'')}>
+            <div className="ar" style={{fontSize:40,color:'var(--ink)',lineHeight:1.1}}>{l.c}</div>
+            <div className={"text-[11.5px] font-semibold mt-1 truncate "+scr} style={{color:'var(--ink2)'}}>{nameOf(l)}</div>
+            <div className="text-[10.5px]" style={{color:'var(--muted)'}}>{l.s}</div>
+          </button>
+        ))}
+      </div>
+      <p className={"mt-5 text-[12px] "+scr} style={{color:'var(--muted)'}}>{t.audionote}</p>
+    </div>
+  );
+}
+
+function LetterSheet({l,t,scr,nameOf,meanOf,done,toggleDone,onClose}){
+  const f=forms(l.c);
+  const isDone=done.has(l.c);
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onClose}>
+      <div className="absolute inset-0" style={{background:'rgba(10,10,25,.5)',backdropFilter:'blur(3px)'}}></div>
+      <div onClick={e=>e.stopPropagation()} className="sheet card relative w-full sm:max-w-lg p-6 sm:rounded-3xl" style={{borderBottomLeftRadius:0,borderBottomRightRadius:0,maxHeight:'92vh',overflowY:'auto',boxShadow:'var(--shadow)'}}>
+        <button onClick={onClose} className="btn ghost absolute right-4 top-4 rounded-full w-8 h-8" style={{fontSize:16,lineHeight:1}}>×</button>
+        <div className="text-center">
+          <div className="ar" style={{fontSize:90,color:'var(--gold)',lineHeight:1}}>{l.c}</div>
+          <div className={"disp mt-1 "+scr} style={{fontSize:24}}>{nameOf(l)}</div>
+          <div className="text-[13px]" style={{color:'var(--muted)'}}>{t.sound}: <b style={{color:'var(--lapis)'}}>{l.s}</b></div>
+          <button onClick={()=>speak(l.c)} className={"btn pri mt-3 px-5 py-2 rounded-full text-[14px] "+scr}>🔊 {t.listen}</button>
+        </div>
+
+        <div className="mt-6">
+          <div className={"text-[11px] font-bold uppercase tracking-wider mb-2 "+scr} style={{color:'var(--gold)'}}>{t.forms}</div>
+          <div className="grid grid-cols-4 gap-2">
+            {[['iso',f.iso],['ini',f.ini],['med',f.med],['fin',f.fin]].map(([k,v])=>(
+              <div key={k} className="text-center p-2 rounded-xl" style={{background:'color-mix(in srgb,var(--lapis) 7%,transparent)'}}>
+                <div className="ar" style={{fontSize:30,color:'var(--ink)'}}>{v}</div>
+                <div className={"text-[10.5px] mt-0.5 "+scr} style={{color:'var(--muted)'}}>{t[k]}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-6">
+          <div className={"text-[11px] font-bold uppercase tracking-wider mb-2 "+scr} style={{color:'var(--gold)'}}>{t.example}</div>
+          <div className="flex items-center gap-3 p-3 rounded-2xl" style={{background:'color-mix(in srgb,var(--emerald) 8%,transparent)'}}>
+            <div className="ar" style={{fontSize:34}}>{l.ex}</div>
+            <div className="min-w-0">
+              <div style={{fontWeight:700,fontSize:14}}>{l.tr}</div>
+              <div className={"text-[13px] "+scr} style={{color:'var(--ink2)'}}>{meanOf(l)}</div>
+            </div>
+            <button onClick={()=>speak(l.ex)} className="btn ghost ml-auto rounded-full w-9 h-9 shrink-0" style={{fontSize:15}}>🔊</button>
+          </div>
+        </div>
+
+        <button onClick={()=>toggleDone(l.c)} className={"btn w-full mt-6 py-3 rounded-2xl text-[14px] "+scr+(isDone?' ghost':' pri')} style={isDone?{color:'var(--emerald)',borderColor:'var(--emerald)'}:{}}>
+          {isDone? t.doneL : t.marklearned}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function Vowels({t,scr,lang}){
+  const dof = h => lang==='ta'?h.dt:lang==='hi'?h.dh:h.de;
+  return (
+    <div className="fade">
+      <h1 className={"disp "+scr} style={{fontSize:'clamp(22px,4vw,30px)'}}>{t.voweltitle}</h1>
+      <p className={"mb-4 "+scr} style={{color:'var(--muted)',maxWidth:640}}>{t.vowelsub}</p>
+      <div className="grid gap-3" style={{gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))'}}>
+        {HARAKAT.map(h=>(
+          <Card key={h.name} className="p-4 flex gap-3 items-start">
+            <div className="ar text-center" style={{fontSize:44,color:'var(--gold)',minWidth:56,lineHeight:1}}>{h.sym}</div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <div style={{fontWeight:700}}>{h.name}</div>
+                <button onClick={()=>speak(h.sym)} className="btn ghost rounded-full w-7 h-7 text-[12px]">🔊</button>
+              </div>
+              <div className="text-[12.5px]" style={{color:'var(--lapis)'}}>{h.s}</div>
+              <div className={"text-[12.5px] mt-1 "+scr} style={{color:'var(--ink2)'}}>{dof(h)}</div>
+            </div>
+          </Card>
+        ))}
+      </div>
+      <p className={"mt-5 text-[12px] "+scr} style={{color:'var(--muted)'}}>{t.audionote}</p>
+    </div>
+  );
+}
+
+function Practice({t,scr,L,nameOf}){
+  const N=8;
+  const rnd=n=>Math.floor(Math.random()*n);
+  const build=()=>{
+    const pool=[...L];
+    for(let i=pool.length-1;i>0;i--){ const j=rnd(i+1); [pool[i],pool[j]]=[pool[j],pool[i]]; }
+    return pool.slice(0,N).map(ans=>{
+      const opts=[ans];
+      while(opts.length<4){ const c=L[rnd(L.length)]; if(!opts.includes(c)) opts.push(c); }
+      for(let i=opts.length-1;i>0;i--){ const j=rnd(i+1); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+      return {ans,opts};
+    });
+  };
+  const [qs,setQs]=useState(build);
+  const [i,setI]=useState(0);
+  const [score,setScore]=useState(0);
+  const [picked,setPicked]=useState(null);
+  const [fin,setFin]=useState(false);
+  const q=qs[i];
+
+  const pick=o=>{ if(picked) return; setPicked(o); if(o===q.ans) setScore(s=>s+1); };
+  const next=()=>{ if(i+1>=qs.length){ setFin(true); return; } setI(i+1); setPicked(null); };
+  const restart=()=>{ setQs(build()); setI(0); setScore(0); setPicked(null); setFin(false); };
+
+  if(fin) return (
+    <div className="fade text-center py-10">
+      <div style={{fontSize:52}}>{score>=qs.length-1?'🌟':score>=qs.length/2?'👍':'📚'}</div>
+      <h1 className={"disp mt-2 "+scr} style={{fontSize:28}}>{t.done}</h1>
+      <p className={"mt-1 "+scr} style={{color:'var(--muted)'}}>{t.youscored} <b style={{color:'var(--emerald)'}}>{score} / {qs.length}</b></p>
+      <button onClick={restart} className={"btn pri mt-5 px-6 py-2.5 rounded-full "+scr}>{t.restart}</button>
+    </div>
+  );
+
+  return (
+    <div className="fade">
+      <div className="flex items-center justify-between mb-3">
+        <h1 className={"disp "+scr} style={{fontSize:'clamp(20px,4vw,26px)'}}>{t.practitle}</h1>
+        <div className={"text-[13px] "+scr} style={{color:'var(--muted)'}}>{t.q} {i+1}/{qs.length} · {t.score} {score}</div>
+      </div>
+      <Card className="p-6 text-center">
+        <p className={"text-[13px] mb-3 "+scr} style={{color:'var(--muted)'}}>{t.pracsub}</p>
+        <div className="ar" style={{fontSize:82,color:'var(--gold)',lineHeight:1}}>{q.ans.c}</div>
+        <button onClick={()=>speak(q.ans.c)} className="btn ghost rounded-full px-4 py-1.5 text-[13px] mt-2">🔊 {t.listen}</button>
+        <div className="grid grid-cols-2 gap-2.5 mt-5">
+          {q.opts.map((o,idx)=>{
+            let cls='ghost';
+            if(picked){ if(o===q.ans) cls='ok'; else if(o===picked) cls='no'; }
+            const st = cls==='ok'?{background:'color-mix(in srgb,var(--emerald) 18%,transparent)',borderColor:'var(--emerald)',color:'var(--emerald)'}
+                    : cls==='no'?{background:'color-mix(in srgb,#c0392b 15%,transparent)',borderColor:'#c0392b',color:'#c0392b'}:{};
+            return <button key={idx} onClick={()=>pick(o)} className={"btn ghost py-3 rounded-2xl text-[15px] font-semibold "+scr} style={st}>{nameOf(o)}</button>;
+          })}
+        </div>
+        {picked && <div className={"mt-4 "+scr}>
+          <div style={{fontWeight:700,color:picked===q.ans?'var(--emerald)':'#c0392b'}}>{picked===q.ans?t.correct:t.tryagain}</div>
+          <button onClick={next} className={"btn pri mt-3 px-6 py-2 rounded-full "+scr}>{t.next} →</button>
+        </div>}
+      </Card>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
