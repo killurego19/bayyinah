@@ -3204,9 +3204,9 @@
                         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4" onClick={() => setShowSettings(false)}>
                             <div className="absolute inset-0" style={{ background: 'rgba(9,14,32,.45)', backdropFilter: 'blur(2px)' }}></div>
                             <div onClick={e => e.stopPropagation()}
-                                 className="fade-in relative w-full max-w-sm rounded-3xl p-6"
+                                 className="fade-in relative w-full max-w-sm rounded-3xl p-6 max-h-[92vh] overflow-y-auto"
                                  style={{ background: 'var(--bg-soft)', boxShadow: 'var(--shadow-lg)', border: '1px solid var(--line)' }}>
-                                <div className="flex items-center justify-between mb-5">
+                                <div className="flex items-center justify-between sticky top-0 z-10 -mx-6 px-6 -mt-6 pt-6 pb-3 mb-4" style={{ background: 'var(--bg-soft)' }}>
                                     <h3 className="font-display text-xl m-0">Settings</h3>
                                     <button className="icon-btn" onClick={() => setShowSettings(false)}><Icon d={I.x} /></button>
                                 </div>
@@ -3291,9 +3291,9 @@
                         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4" onClick={() => setShowRange(false)}>
                             <div className="absolute inset-0" style={{ background: 'rgba(9,14,32,.45)', backdropFilter: 'blur(2px)' }}></div>
                             <div onClick={e => e.stopPropagation()}
-                                 className="fade-in relative w-full max-w-sm rounded-3xl p-6"
+                                 className="fade-in relative w-full max-w-sm rounded-3xl p-6 max-h-[92vh] overflow-y-auto"
                                  style={{ background: 'var(--bg-soft)', boxShadow: 'var(--shadow-lg)', border: '1px solid var(--line)' }}>
-                                <div className="flex items-center justify-between mb-5">
+                                <div className="flex items-center justify-between sticky top-0 z-10 -mx-6 px-6 -mt-6 pt-6 pb-3 mb-4" style={{ background: 'var(--bg-soft)' }}>
                                     <h3 className="font-display text-xl m-0">Select range to play</h3>
                                     <button className="icon-btn" onClick={() => setShowRange(false)}><Icon d={I.x} /></button>
                                 </div>
