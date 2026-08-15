@@ -1108,41 +1108,34 @@
 
         // ─── Dictionary popup: long-press an English word → meaning in the selected language ───
         function DictPopup({ word, x, y, lang, onClose }) {
-            // lang: 'ta' | 'hi' | 'en' — show a short English meaning, plus the selected language's meaning
+            // FREE dictionaries — no AI tokens. English def: dictionaryapi.dev · translation: MyMemory. Cached on-device.
             const [st, setSt] = useState({ loading: true, en: '', tr: '' });
             useEffect(() => {
                 let alive = true;
-                const w = (word || '').toLowerCase();
+                const w = (word || '').toLowerCase().replace(/[^a-z'’-]/g, '');
                 if (!w) { setSt({ loading: false, en: '—', tr: '' }); return; }
-                const key = 'dict2:' + lang + ':' + w;
+                const key = 'dict3:' + lang + ':' + w;
                 try { const c = localStorage.getItem(key); if (c) { const o = JSON.parse(c); setSt({ loading: false, en: o.en || '', tr: o.tr || '' }); return; } } catch (e) {}
-                const targetName = lang === 'ta' ? 'Tamil' : lang === 'hi' ? 'Hindi' : '';
-                const targetTag = lang === 'ta' ? 'TA' : 'HI';
-                const sys = targetName
-                    ? 'You are a concise bilingual dictionary. For the given English word give a short, simple English meaning and its meaning in ' + targetName + '. Reply in EXACTLY this one-line format and nothing else: EN: <short english meaning> | ' + targetTag + ': <' + targetName + ' meaning in ' + targetName + ' script>'
-                    : 'You are a concise dictionary. Reply with ONLY a short, simple English meaning of the given word — a few words, nothing else.';
-                (async () => {
-                    try {
-                        const r = await fetch('api/ask', {
-                            method: 'POST', headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ system: sys, messages: [{ role: 'user', content: 'Word: ' + word }], maxTokens: 400 })
-                        });
-                        const d = await r.json();
-                        const raw = String(d.text || '').replace(/```/g, '').trim();
-                        let en = '', tr = '';
-                        if (targetName) {
-                            const em = raw.match(/EN\s*:\s*([^|\n]+)/i);
-                            const tm = raw.match(/(?:TA|HI)\s*:\s*([^|\n]+)/i);
-                            en = em ? em[1].trim() : raw.slice(0, 140);
-                            tr = tm ? tm[1].trim() : '';
-                        } else {
-                            en = raw.replace(/^EN\s*:\s*/i, '').replace(/^["'“”]+|["'“”]+$/g, '').slice(0, 160);
-                        }
-                        if (!alive) return;
-                        setSt({ loading: false, en: en || '—', tr: tr });
-                        try { localStorage.setItem(key, JSON.stringify({ en: en, tr: tr })); } catch (e3) {}
-                    } catch (e) { if (alive) setSt({ loading: false, en: 'Unavailable — please try again.', tr: '' }); }
-                })();
+                const wantTr = (lang === 'ta' || lang === 'hi');
+                const defP = fetch('https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(w))
+                    .then(r => r.ok ? r.json() : null)
+                    .then(j => { try { return String(j[0].meanings[0].definitions[0].definition || '').slice(0, 140); } catch (e) { return ''; } })
+                    .catch(() => '');
+                const trP = wantTr
+                    ? fetch('https://api.mymemory.translated.net/get?q=' + encodeURIComponent(w) + '&langpair=en|' + lang)
+                        .then(r => r.json())
+                        .then(j => {
+                            const t = ((j && j.responseData && j.responseData.translatedText) || '').trim();
+                            if (!t || /MYMEMORY|INVALID|NO QUERY|429/i.test(t) || t.toLowerCase() === w) return '';
+                            return t;
+                        }).catch(() => '')
+                    : Promise.resolve('');
+                Promise.all([defP, trP]).then(function (res) {
+                    if (!alive) return;
+                    const en = res[0], tr = res[1];
+                    setSt({ loading: false, en: en, tr: tr });
+                    try { localStorage.setItem(key, JSON.stringify({ en: en, tr: tr })); } catch (e) {}
+                });
                 return () => { alive = false; };
             }, [word, lang]);
             const vw = window.innerWidth, W = 262;
@@ -1160,14 +1153,18 @@
                         </div>
                         {st.loading ? (
                             <div className="text-[13px] flex items-center gap-2 py-1" style={{ color: 'var(--muted)' }}><span className="spin inline-flex"><Icon d={I.loader} size={13} /></span> …</div>
+                        ) : (!st.en && !st.tr) ? (
+                            <div className="text-[13px] py-0.5" style={{ color: 'var(--muted)' }}>No dictionary entry found.</div>
                         ) : (
                             <div className="space-y-2.5">
-                                <div>
-                                    <div className="text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: 'var(--gold)' }}>English</div>
-                                    <div className="text-[14.5px] leading-snug" style={{ color: 'var(--ink-soft)' }}>{st.en}</div>
-                                </div>
+                                {st.en && (
+                                    <div>
+                                        <div className="text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: 'var(--gold)' }}>English</div>
+                                        <div className="text-[14.5px] leading-snug" style={{ color: 'var(--ink-soft)' }}>{st.en}</div>
+                                    </div>
+                                )}
                                 {trLabel && st.tr && (
-                                    <div style={{ borderTop: '1px solid var(--line)', paddingTop: 8 }}>
+                                    <div style={st.en ? { borderTop: '1px solid var(--line)', paddingTop: 8 } : {}}>
                                         <div className="text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: 'var(--gold)' }}>{trLabel}</div>
                                         <div className={'text-[16px] leading-snug ' + trFont} style={{ color: 'var(--accent-deep)' }}>{st.tr}</div>
                                     </div>
