@@ -1846,7 +1846,13 @@
                 if (e.button && e.button !== 0) return;   // ignore right/middle mouse (contextmenu handles right-click)
                 const w = wordAt(e.target); if (!w) return;
                 const pt = e.touches ? e.touches[0] : e, x = pt.clientX, y = pt.clientY;
-                dictTimer.current = setTimeout(() => onDefineWord(w, x, y), 430);
+                dictTimer.current = setTimeout(() => {
+                    onDefineWord(w, x, y);
+                    // swallow the click that ends this long-press so it doesn't instantly close the popup
+                    const swallow = ev => { ev.stopPropagation(); ev.preventDefault(); document.removeEventListener('click', swallow, true); };
+                    document.addEventListener('click', swallow, true);
+                    setTimeout(() => document.removeEventListener('click', swallow, true), 800);
+                }, 430);
             };
             const wUp = () => clearTimeout(dictTimer.current);
             const wMenu = e => { if (!onDefineWord) return; const w = wordAt(e.target); if (w) { e.preventDefault(); onDefineWord(w, e.clientX, e.clientY); } };
