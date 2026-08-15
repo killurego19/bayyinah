@@ -1107,42 +1107,38 @@
         }
 
         // ─── Dictionary popup: long-press an English word → meaning in the selected language ───
-        function DictPopup({ word, x, y, lang, onClose }) {
-            // FREE dictionaries — no AI tokens. English def: dictionaryapi.dev · translation: MyMemory. Cached on-device.
-            const [st, setSt] = useState({ loading: true, en: '', tr: '' });
+        function DictPopup({ word, x, y, langs, onClose }) {
+            // Offline built-in dictionary (Tamil/Hindi, high quality) + free English definition. No AI tokens.
+            const [st, setSt] = useState({ loading: true, en: '', ta: '', hi: '' });
             useEffect(() => {
                 let alive = true;
                 const w = (word || '').toLowerCase().replace(/[^a-z'’-]/g, '');
-                if (!w) { setSt({ loading: false, en: '—', tr: '' }); return; }
-                const key = 'dict3:' + lang + ':' + w;
-                try { const c = localStorage.getItem(key); if (c) { const o = JSON.parse(c); setSt({ loading: false, en: o.en || '', tr: o.tr || '' }); return; } } catch (e) {}
-                const wantTr = (lang === 'ta' || lang === 'hi');
-                const defP = fetch('https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(w))
-                    .then(r => r.ok ? r.json() : null)
-                    .then(j => { try { return String(j[0].meanings[0].definitions[0].definition || '').slice(0, 140); } catch (e) { return ''; } })
-                    .catch(() => '');
-                const trP = wantTr
-                    ? fetch('https://api.mymemory.translated.net/get?q=' + encodeURIComponent(w) + '&langpair=en|' + lang)
-                        .then(r => r.json())
-                        .then(j => {
-                            const t = ((j && j.responseData && j.responseData.translatedText) || '').trim();
-                            if (!t || /MYMEMORY|INVALID|NO QUERY|429/i.test(t) || t.toLowerCase() === w) return '';
-                            return t;
-                        }).catch(() => '')
-                    : Promise.resolve('');
-                Promise.all([defP, trP]).then(function (res) {
+                if (!w) { setSt({ loading: false, en: '', ta: '', hi: '' }); return; }
+                (async () => {
+                    if (!window.__dict) {
+                        try { window.__dict = await (await fetch(DATA_DIR + '/dictionary.json')).json(); }
+                        catch (e) { window.__dict = {}; }
+                    }
                     if (!alive) return;
-                    const en = res[0], tr = res[1];
-                    setSt({ loading: false, en: en, tr: tr });
-                    try { localStorage.setItem(key, JSON.stringify({ en: en, tr: tr })); } catch (e) {}
-                });
+                    const ent = window.__dict[w] || ['', ''];
+                    setSt({ loading: false, en: '', ta: ent[0] || '', hi: ent[1] || '' });
+                    let en = ''; const ek = 'dictEN:' + w;
+                    try { en = localStorage.getItem(ek) || ''; } catch (e) {}
+                    if (!en) {
+                        try {
+                            const r = await fetch('https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(w));
+                            if (r.ok) { const j = await r.json(); en = String(j[0].meanings[0].definitions[0].definition || '').slice(0, 140); if (en) { try { localStorage.setItem(ek, en); } catch (e2) {} } }
+                        } catch (e3) {}
+                    }
+                    if (alive && en) setSt(s => ({ ...s, en: en }));
+                })();
                 return () => { alive = false; };
-            }, [word, lang]);
+            }, [word]);
+            const showTa = langs.indexOf('ta') >= 0 && st.ta;
+            const showHi = langs.indexOf('hi') >= 0 && st.hi;
             const vw = window.innerWidth, W = 262;
             const left = Math.max(12, Math.min((x || vw / 2) - W / 2, vw - W - 12));
             const top = Math.max(12, (y || 100) + 14);
-            const trLabel = lang === 'ta' ? 'தமிழ்' : lang === 'hi' ? 'हिन्दी' : '';
-            const trFont = lang === 'ta' ? 'font-tamil' : lang === 'hi' ? 'font-hindi' : '';
             return (
                 <div className="fixed inset-0 z-[85]" onClick={onClose}>
                     <div onClick={e => e.stopPropagation()} className="fade-in rounded-2xl p-4"
@@ -1153,20 +1149,26 @@
                         </div>
                         {st.loading ? (
                             <div className="text-[13px] flex items-center gap-2 py-1" style={{ color: 'var(--muted)' }}><span className="spin inline-flex"><Icon d={I.loader} size={13} /></span> …</div>
-                        ) : (!st.en && !st.tr) ? (
+                        ) : (!showTa && !showHi && !st.en) ? (
                             <div className="text-[13px] py-0.5" style={{ color: 'var(--muted)' }}>No dictionary entry found.</div>
                         ) : (
                             <div className="space-y-2.5">
-                                {st.en && (
+                                {showTa && (
                                     <div>
-                                        <div className="text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: 'var(--gold)' }}>English</div>
-                                        <div className="text-[14.5px] leading-snug" style={{ color: 'var(--ink-soft)' }}>{st.en}</div>
+                                        <div className="text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: 'var(--gold)' }}>தமிழ்</div>
+                                        <div className="text-[16px] leading-snug font-tamil" style={{ color: 'var(--accent-deep)' }}>{st.ta}</div>
                                     </div>
                                 )}
-                                {trLabel && st.tr && (
-                                    <div style={st.en ? { borderTop: '1px solid var(--line)', paddingTop: 8 } : {}}>
-                                        <div className="text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: 'var(--gold)' }}>{trLabel}</div>
-                                        <div className={'text-[16px] leading-snug ' + trFont} style={{ color: 'var(--accent-deep)' }}>{st.tr}</div>
+                                {showHi && (
+                                    <div style={showTa ? { borderTop: '1px solid var(--line)', paddingTop: 8 } : {}}>
+                                        <div className="text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: 'var(--gold)' }}>हिन्दी</div>
+                                        <div className="text-[16px] leading-snug font-hindi" style={{ color: 'var(--accent-deep)' }}>{st.hi}</div>
+                                    </div>
+                                )}
+                                {st.en && (
+                                    <div style={(showTa || showHi) ? { borderTop: '1px solid var(--line)', paddingTop: 8 } : {}}>
+                                        <div className="text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: 'var(--muted)' }}>English</div>
+                                        <div className="text-[13.5px] leading-snug" style={{ color: 'var(--ink-soft)' }}>{st.en}</div>
                                     </div>
                                 )}
                             </div>
@@ -3563,7 +3565,7 @@
 
                     {/* ── Share sheet (desktop / no native share) ── */}
                     {dictSel && <DictPopup word={dictSel.word} x={dictSel.x} y={dictSel.y}
-                                           lang={show.ta ? 'ta' : show.hi ? 'hi' : 'en'}
+                                           langs={[show.ta ? 'ta' : '', show.hi ? 'hi' : ''].filter(Boolean)}
                                            onClose={() => setDictSel(null)} />}
 
                     {shareV && (() => {
