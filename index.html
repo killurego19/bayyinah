@@ -906,8 +906,16 @@
 
 
         // linkify Quran refs in documents — but not Bible refs (Malachi 3:1 etc.)
-        function DocText({ text }) {
+        function DocText({ text, wrap }) {
             const parts = String(text || '').split(/(\b\d{1,3}:\d{1,3}\b)/g);
+            const plain = (part, key) => {
+                if (!wrap) return <React.Fragment key={key}>{part}</React.Fragment>;
+                return <React.Fragment key={key}>{String(part).split(/(\s+)/).map((tk, ti) => {
+                    if (!tk) return null;
+                    if (/^\s+$/.test(tk)) return <React.Fragment key={ti}>{tk}</React.Fragment>;
+                    return <span key={ti} className="dword" data-w={tk.replace(/[^A-Za-z'’-]/g, '')}>{tk}</span>;
+                })}</React.Fragment>;
+            };
             return <>{parts.map((part, i) => {
                 const m = part.match(/^(\d{1,3}):(\d{1,3})$/);
                 if (m) {
@@ -924,7 +932,7 @@
                                          else { window.__openRefPop && window.__openRefPop(s, a); } }}>{part}</span>;
                     }
                 }
-                return <React.Fragment key={i}>{part}</React.Fragment>;
+                return plain(part, i);
             })}</>;
         }
         // ─── grounding retrieval (ported from the Bayyinah main app) ──────
@@ -2299,6 +2307,22 @@
             const [shareV, setShareV] = useState(null);
             const [dictSel, setDictSel] = useState(null);
             const defineWord = useCallback((w, x, y) => setDictSel({ word: w, x, y }), []);
+            // doc-page (appendix/intro) long-press dictionary handlers
+            const docDictTimer = useRef(null);
+            const docWordAt = tgt => { const el = tgt && tgt.closest && tgt.closest('.dword'); return el ? (el.getAttribute('data-w') || '') : ''; };
+            const dDown = e => {
+                if (e.button && e.button !== 0) return;
+                const w = docWordAt(e.target); if (!w) return;
+                const pt = e.touches ? e.touches[0] : e, x = pt.clientX, y = pt.clientY;
+                docDictTimer.current = setTimeout(() => {
+                    defineWord(w, x, y);
+                    const sw = ev => { ev.stopPropagation(); ev.preventDefault(); document.removeEventListener('click', sw, true); };
+                    document.addEventListener('click', sw, true);
+                    setTimeout(() => document.removeEventListener('click', sw, true), 700);
+                }, 430);
+            };
+            const dUp = () => clearTimeout(docDictTimer.current);
+            const dMenu = e => { const w = docWordAt(e.target); if (w) { e.preventDefault(); defineWord(w, e.clientX, e.clientY); } };
 
             const stopAudio = useCallback(() => {
                 playTokenRef.current++;
@@ -3117,7 +3141,10 @@
                                 const taMode = docData.multi && docLang === 'ta' && docData.multi.ta;
                                 const bodyCls = taMode ? 'font-tamil' : 'verse-en';
                                 return (
-                                    <article className="ws-card rounded-3xl mt-5 px-6 sm:px-10 py-9">
+                                    <article className={"ws-card rounded-3xl mt-5 px-6 sm:px-10 py-9 " + (taMode ? '' : 'dict-on')}
+                                             onTouchStart={taMode ? undefined : dDown} onTouchEnd={dUp} onTouchMove={dUp}
+                                             onMouseDown={taMode ? undefined : dDown} onMouseUp={dUp} onMouseLeave={dUp}
+                                             onContextMenu={taMode ? undefined : dMenu}>
                                         <div className="text-center mb-8">
                                             <div className="eyebrow">{content.eyebrow}</div>
                                             <h1 className={'font-display hero-title tracking-tight mt-2 mb-0 ' + (taMode ? 'font-tamil' : '')} style={{ fontSize: 'clamp(26px, 5vw, 42px)', fontWeight: 400 }}>{content.title}</h1>
@@ -3134,13 +3161,13 @@
                                                 ) : it.t === 'q' ? (
                                                     <blockquote key={ii} className="my-5 ml-0 mr-0 pl-5 py-0.5" style={{ borderLeft: '3px solid color-mix(in srgb, var(--gold) 65%, transparent)' }}>
                                                         <p className={bodyCls + ' italic text-[16px] leading-relaxed m-0'} style={{ color: 'var(--ink)' }}>
-                                                            <DocText text={it.text} />
+                                                            <DocText text={it.text} wrap={!taMode} />
                                                         </p>
                                                         {it.by && <div className="eyebrow mt-2" style={{ fontSize: 10 }}><DocText text={it.by} /></div>}
                                                     </blockquote>
                                                 ) : (
                                                     <p key={ii} className={bodyCls + ' text-[16px] mb-4'} style={{ color: 'var(--ink-soft)', lineHeight: 1.85 }}>
-                                                        <DocText text={it.text} />
+                                                        <DocText text={it.text} wrap={!taMode} />
                                                     </p>
                                                 ))}
                                             </section>
