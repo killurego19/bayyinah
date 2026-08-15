@@ -2364,19 +2364,27 @@
                 setSearchResults(null);
                 setView('reader');
                 setCurrentSurah(s);
-                let tries = 0;
-                const tryScroll = () => {
+                let tries = 0, userScrolled = false;
+                const onUserScroll = () => { userScrolled = true; };
+                const recenter = () => { if (userScrolled) return; const e = document.getElementById(`v-${s}-${a}`); if (e) e.scrollIntoView({ behavior: 'auto', block: 'center' }); };
+                const land = () => {
                     const el = document.getElementById(`v-${s}-${a}`);
-                    if (el) {
-                        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        el.style.outline = '2px solid var(--gold)';
-                        el.style.outlineOffset = '3px';
-                        setTimeout(() => { el.style.outline = 'none'; }, 2400);
-                    } else if (tries++ < 50) {
-                        setTimeout(tryScroll, 100);   // wait for the chapter to finish rendering (up to ~5s)
-                    }
+                    if (!el) { if (tries++ < 60) setTimeout(land, 100); return; }   // wait for the chapter to render
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    el.style.outline = '2px solid var(--gold)';
+                    el.style.outlineOffset = '3px';
+                    // re-center as late content settles (word-by-word data, fonts) — unless the user starts scrolling
+                    window.addEventListener('wheel', onUserScroll, { passive: true, once: true });
+                    window.addEventListener('touchmove', onUserScroll, { passive: true, once: true });
+                    setTimeout(recenter, 350);
+                    setTimeout(recenter, 800);
+                    setTimeout(() => {
+                        window.removeEventListener('wheel', onUserScroll);
+                        window.removeEventListener('touchmove', onUserScroll);
+                        const e = document.getElementById(`v-${s}-${a}`); if (e) e.style.outline = 'none';
+                    }, 2600);
                 };
-                setTimeout(tryScroll, 60);
+                setTimeout(land, 60);
             }, []);
 
 
@@ -2971,16 +2979,21 @@
                                 <button className="toc-btn" onClick={() => { setView('home'); window.scrollTo({ top: 0 }); }}>
                                     <Icon d={I.left} size={15} /> Back
                                 </button>
-                                {docData && docData.multi && (
-                                    <div className="flex items-center gap-1.5">
-                                        {Object.keys(docData.multi).map(k => (
-                                            <button key={k} onClick={() => setDocLang(k)}
-                                                    className={'lang-pill rounded-full font-bold text-xs px-3 py-1.5 ' + (docLang === k ? 'on' : '') + (k === 'ta' ? ' font-tamil' : '')}>
+                                <div className="flex items-center gap-1.5">
+                                    {docId && docId.indexOf('appendix-') === 0 && (
+                                        <a href={`https://library.wikisubmission.org/file/quran-the-final-testament-appendix-${docId.slice(9)}`}
+                                           target="_blank" rel="noopener noreferrer"
+                                           className="lang-pill rounded-full font-bold text-xs px-3 py-1.5 inline-flex items-center gap-1.5" title="Download PDF">
+                                            <Icon d={I.download} size={13} /> PDF
+                                        </a>
+                                    )}
+                                    {docData && docData.multi && Object.keys(docData.multi).map(k => (
+                                        <button key={k} onClick={() => setDocLang(k)}
+                                                className={'lang-pill rounded-full font-bold text-xs px-3 py-1.5 ' + (docLang === k ? 'on' : '') + (k === 'ta' ? ' font-tamil' : '')}>
                                                 {k === 'ta' ? 'தமிழ்' : 'English'}
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
+                                        </button>
+                                    ))}
+                                </div>
                             </section>
                             {docLoading && (
                                 <div className="ws-card rounded-2xl p-10 mt-5 text-center" style={{ color: 'var(--muted)' }}>
