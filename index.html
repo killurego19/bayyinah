@@ -560,6 +560,11 @@
         }
         .footnote-star:hover { color: var(--emerald-soft); }
 
+        /* long-press dictionary */
+        .dict-on { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+        .dword { cursor: pointer; border-radius: 4px; transition: background .15s; }
+        @media (hover:hover) { .dword:hover { background: color-mix(in srgb, var(--gold) 16%, transparent); } }
+
         .lang-pill {
             border: 1px solid var(--line-strong);
             color: var(--muted);
@@ -1073,10 +1078,18 @@
         }
 
         // render translation text with clickable footnote stars
-        function TransText({ text, hasFootnote, onStar, query }) {
+        function TransText({ text, hasFootnote, onStar, query, wrap }) {
             if (!text) return null;
             const parts = String(text).split('*');
             const out = [];
+            const emit = (str, key) => {
+                if (!wrap) { out.push(<React.Fragment key={key}>{str}</React.Fragment>); return; }
+                String(str).split(/(\s+)/).forEach((tk, ti) => {
+                    if (!tk) return;
+                    if (/^\s+$/.test(tk)) out.push(<React.Fragment key={key + 'w' + ti}>{tk}</React.Fragment>);
+                    else out.push(<span key={key + 'w' + ti} className="dword" data-w={tk.replace(/[^A-Za-z'’-]/g, '')}>{tk}</span>);
+                });
+            };
             parts.forEach((part, i) => {
                 if (query) {
                     const rx = new RegExp(`(${escapeReg(query)})`, 'gi');
@@ -1084,13 +1097,63 @@
                     segs.forEach((sg, j) => {
                         if (rx.test(sg) || sg.toLowerCase() === query.toLowerCase())
                             out.push(<span key={`${i}-${j}`} className="highlight">{sg}</span>);
-                        else out.push(<React.Fragment key={`${i}-${j}`}>{sg}</React.Fragment>);
+                        else emit(sg, `${i}-${j}`);
                     });
-                } else out.push(<React.Fragment key={i}>{part}</React.Fragment>);
+                } else emit(part, `${i}`);
                 if (i < parts.length - 1)
                     out.push(<span key={`s${i}`} className="footnote-star" title="View footnote" onClick={onStar}>*</span>);
             });
             return <>{out}</>;
+        }
+
+        // ─── Dictionary popup: long-press an English word → meaning in the selected language ───
+        function DictPopup({ word, x, y, lang, onClose }) {
+            const [state, setState] = useState({ loading: true, meaning: '' });
+            useEffect(() => {
+                let alive = true;
+                const w = (word || '').toLowerCase();
+                if (!w) { setState({ loading: false, meaning: '—' }); return; }
+                const key = 'dict:' + lang + ':' + w;
+                let cached = null; try { cached = localStorage.getItem(key); } catch (e) {}
+                if (cached) { setState({ loading: false, meaning: cached }); return; }
+                const langName = lang === 'ta' ? 'Tamil' : lang === 'hi' ? 'Hindi' : 'simple English';
+                (async () => {
+                    try {
+                        const r = await fetch('api/ask', {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                system: 'You are a concise dictionary. Reply with ONLY the meaning of the given English word in the requested language — just a few words, no quotes, no explanation, no romanization.',
+                                messages: [{ role: 'user', content: `Meaning of the English word "${word}" in ${langName}:` }],
+                                maxTokens: 40
+                            })
+                        });
+                        const d = await r.json();
+                        const m = String(d.text || '').trim().replace(/^["'“”]+|["'“”.]+$/g, '').split('\n')[0].slice(0, 120);
+                        if (!alive) return;
+                        setState({ loading: false, meaning: m || '—' });
+                        if (m) { try { localStorage.setItem(key, m); } catch (e) {} }
+                    } catch (e) { if (alive) setState({ loading: false, meaning: 'Unavailable — please try again.' }); }
+                })();
+                return () => { alive = false; };
+            }, [word, lang]);
+            const vw = window.innerWidth, W = 240;
+            const left = Math.max(12, Math.min((x || vw / 2) - W / 2, vw - W - 12));
+            const top = Math.max(12, (y || 100) + 14);
+            return (
+                <div className="fixed inset-0 z-[85]" onClick={onClose}>
+                    <div onClick={e => e.stopPropagation()} className="fade-in rounded-2xl p-4"
+                         style={{ position: 'fixed', left, top, width: W, background: 'var(--bg-soft)', border: '1px solid var(--line)', boxShadow: 'var(--shadow-lg)' }}>
+                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                            <span className="font-bold text-[15px]" style={{ color: 'var(--ink)' }}>{word}</span>
+                            <button className="icon-btn" style={{ width: 24, height: 24 }} onClick={onClose}><Icon d={I.x} size={13} /></button>
+                        </div>
+                        {state.loading
+                            ? <div className="text-[13px] flex items-center gap-2" style={{ color: 'var(--muted)' }}><span className="spin inline-flex"><Icon d={I.loader} size={13} /></span> …</div>
+                            : <div className={'text-[15.5px] leading-snug ' + (lang === 'ta' ? 'font-tamil' : lang === 'hi' ? 'font-hindi' : '')} style={{ color: 'var(--accent-deep)' }}>{state.meaning}</div>}
+                        <div className="text-[10px] mt-2" style={{ color: 'var(--muted)' }}>{lang === 'ta' ? 'தமிழ் · AI' : lang === 'hi' ? 'हिन्दी · AI' : 'English · AI'}</div>
+                    </div>
+                </div>
+            );
         }
 
         // ─── Word Study Panel ─────────────────────────────────────────────
@@ -1745,13 +1808,24 @@
         // ─── Verse Card ───────────────────────────────────────────────────
         function VerseCard({ verse, wbwWords, show, fontSize, query, bookmarked,
                              onWord, playing, onPlay, onStopAudio, onBookmark, onCopy, onShare,
-                             activeWordKey, isCurrentInContinuous, mode = 'verse', onExplain, audioWordKey }) {
+                             activeWordKey, isCurrentInContinuous, mode = 'verse', onExplain, audioWordKey, onDefineWord }) {
             const s = Number(verse.Surah), a = Number(verse.Ayah);
             const isBasmalah = a === 0;
             const arSizes = { small: 26, medium: 32, large: 40, xl: 48, xxl: 58 };
             const trSizes = { small: 'text-sm', medium: 'text-[16px]', large: 'text-lg', xl: 'text-[20px]', xxl: 'text-[23px]' };
             const hasFootnote = verse.English_Footnote || verse.Tamil_Footnote || verse.Hindi_Footnote;
             const [openFootnote, setOpenFootnote] = useState(false);
+            // long-press (touch) / right-click (desktop) an English word → dictionary meaning
+            const dictTimer = useRef(null);
+            const wordAt = tgt => { const el = tgt && tgt.closest && tgt.closest('.dword'); return el ? (el.getAttribute('data-w') || '') : ''; };
+            const wDown = e => {
+                if (!onDefineWord) return;
+                const w = wordAt(e.target); if (!w) return;
+                const pt = e.touches ? e.touches[0] : e, x = pt.clientX, y = pt.clientY;
+                dictTimer.current = setTimeout(() => onDefineWord(w, x, y), 430);
+            };
+            const wUp = () => clearTimeout(dictTimer.current);
+            const wMenu = e => { if (!onDefineWord) return; const w = wordAt(e.target); if (w) { e.preventDefault(); onDefineWord(w, e.clientX, e.clientY); } };
 
             const arabicLine = wbwWords ? (
                 <div dir="rtl" lang="ar" className={`font-arabic ${isBasmalah ? 'text-center' : 'text-right'}`}
@@ -1807,8 +1881,9 @@
                     {mode !== 'word' && show.ar && arabicLine}
 
                     {show.en && verse.English && (
-                        <p className={`verse-en ${trSizes[fontSize]} leading-relaxed mt-3 mb-0 ${isBasmalah ? 'text-center' : ''}`} style={{ color: 'var(--ink-soft)' }}>
-                            <TransText text={verse.English} onStar={() => setOpenFootnote(o => !o)} query={query} />
+                        <p className={`verse-en ${onDefineWord ? 'dict-on' : ''} ${trSizes[fontSize]} leading-relaxed mt-3 mb-0 ${isBasmalah ? 'text-center' : ''}`} style={{ color: 'var(--ink-soft)' }}
+                           onTouchStart={wDown} onTouchEnd={wUp} onTouchMove={wUp} onContextMenu={wMenu}>
+                            <TransText text={verse.English} onStar={() => setOpenFootnote(o => !o)} query={query} wrap={!!onDefineWord} />
                         </p>
                     )}
                     {show.ta && verse.Tamil && (
@@ -2192,6 +2267,8 @@
             const ttsAudioRef = useRef(null);
             const [audioWord, setAudioWord] = useState(null);
             const [shareV, setShareV] = useState(null);
+            const [dictSel, setDictSel] = useState(null);
+            const defineWord = useCallback((w, x, y) => setDictSel({ word: w, x, y }), []);
 
             const stopAudio = useCallback(() => {
                 playTokenRef.current++;
@@ -2948,6 +3025,7 @@
                                         onBookmark={toggleBookmark}
                                         onCopy={copyVerse}
                                         onShare={shareVerse}
+                                        onDefineWord={defineWord}
                                         onExplain={v => setAiSel(v)} />
                                 ))}
                             </div>
@@ -3101,6 +3179,7 @@
                                             onStopAudio={stopAudio}
                                             onBookmark={toggleBookmark}
                                             onCopy={copyVerse} onShare={shareVerse}
+                                            onDefineWord={defineWord}
                                             onExplain={v => setAiSel(v)} />
                                     </div>
                                 ))}
@@ -3447,6 +3526,10 @@
                     )}
 
                     {/* ── Share sheet (desktop / no native share) ── */}
+                    {dictSel && <DictPopup word={dictSel.word} x={dictSel.x} y={dictSel.y}
+                                           lang={show.ta ? 'ta' : show.hi ? 'hi' : 'en'}
+                                           onClose={() => setDictSel(null)} />}
+
                     {shareV && (() => {
                         const text = buildVerseText(shareV);
                         const url = location.origin + location.pathname;
