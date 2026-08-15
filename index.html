@@ -1820,6 +1820,7 @@
             const wordAt = tgt => { const el = tgt && tgt.closest && tgt.closest('.dword'); return el ? (el.getAttribute('data-w') || '') : ''; };
             const wDown = e => {
                 if (!onDefineWord) return;
+                if (e.button && e.button !== 0) return;   // ignore right/middle mouse (contextmenu handles right-click)
                 const w = wordAt(e.target); if (!w) return;
                 const pt = e.touches ? e.touches[0] : e, x = pt.clientX, y = pt.clientY;
                 dictTimer.current = setTimeout(() => onDefineWord(w, x, y), 430);
@@ -1882,7 +1883,8 @@
 
                     {show.en && verse.English && (
                         <p className={`verse-en ${onDefineWord ? 'dict-on' : ''} ${trSizes[fontSize]} leading-relaxed mt-3 mb-0 ${isBasmalah ? 'text-center' : ''}`} style={{ color: 'var(--ink-soft)' }}
-                           onTouchStart={wDown} onTouchEnd={wUp} onTouchMove={wUp} onContextMenu={wMenu}>
+                           onTouchStart={wDown} onTouchEnd={wUp} onTouchMove={wUp}
+                           onMouseDown={wDown} onMouseUp={wUp} onMouseLeave={wUp} onContextMenu={wMenu}>
                             <TransText text={verse.English} onStar={() => setOpenFootnote(o => !o)} query={query} wrap={!!onDefineWord} />
                         </p>
                     )}
