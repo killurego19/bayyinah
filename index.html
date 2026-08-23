@@ -1115,7 +1115,7 @@
         }
 
         // ─── Dictionary popup: long-press an English word → meaning in the selected language ───
-        function DictPopup({ word, x, y, langs, onClose }) {
+        function DictPopup({ word, x, y, langs, dictLang, setDictLang, onClose }) {
             // langs: target language codes to show. ta/hi = instant offline dict; others = free translation. Always adds an English definition.
             const [st, setSt] = useState({ loading: true, en: '', items: [] });
             useEffect(() => {
@@ -1188,6 +1188,27 @@
                                     </div>
                                 )}
                             </div>
+                        )}
+                        {setDictLang && (
+                            <select value={dictLang} onChange={e => { e.stopPropagation(); setDictLang(e.target.value); }} onClick={e => e.stopPropagation()}
+                                    className="w-full mt-3 rounded-lg px-2 py-1.5 text-[11px] cursor-pointer"
+                                    style={{ background: 'var(--bg)', border: '1px solid var(--line)', color: 'var(--muted)' }}
+                                    title="Meaning language">
+                                <option value="auto">🌐 Auto (reading languages)</option>
+                                <option value="ta">தமிழ் · Tamil</option>
+                                <option value="hi">हिन्दी · Hindi</option>
+                                <option value="ml">മലയാളം · Malayalam</option>
+                                <option value="te">తెలుగు · Telugu</option>
+                                <option value="kn">ಕನ್ನಡ · Kannada</option>
+                                <option value="ur">اردو · Urdu</option>
+                                <option value="bn">বাংলা · Bengali</option>
+                                <option value="ar">العربية · Arabic</option>
+                                <option value="fr">Français · French</option>
+                                <option value="es">Español · Spanish</option>
+                                <option value="id">Bahasa Indonesia</option>
+                                <option value="ms">Bahasa Melayu</option>
+                                <option value="en">English only</option>
+                            </select>
                         )}
                     </div>
                 </div>
@@ -2547,10 +2568,18 @@
                             if (!window.__apxBook) window.__apxBook = await (await fetch(DATA_DIR + '/appendices.json')).json();
                             const n = Number(id.slice(9));
                             const a = window.__apxBook.find(x => Number(x.n) === n);
-                            const mkI = arr => (arr || []).map(t => {
-                                const im = /^\[\[img:([^\]]+)\]\]$/.exec(t);
-                                return (im && a.images && a.images[im[1]]) ? { t: 'img', src: a.images[im[1]] } : { t: 'p', text: t };
-                            });
+                            const mkI = arr => {
+                                const items = []; let tbl = null;
+                                (arr || []).forEach(t => {
+                                    const im = /^\[\[img:([^\]]+)\]\]$/.exec(t);
+                                    if (im && a.images && a.images[im[1]]) { if (tbl) { items.push(tbl); tbl = null; } items.push({ t: 'img', src: a.images[im[1]] }); return; }
+                                    if (t.indexOf(' · ') >= 0) { if (!tbl) tbl = { t: 'table', rows: [] }; tbl.rows.push(t.split(' · ').map(c => c.trim())); return; }
+                                    if (tbl) { items.push(tbl); tbl = null; }
+                                    items.push({ t: 'p', text: t });
+                                });
+                                if (tbl) items.push(tbl);
+                                return items;
+                            };
                             const enDoc = {
                                 eyebrow: 'Appendix ' + n + ' of 38 — Rashad Khalifa',
                                 title: a.title,
@@ -3127,7 +3156,7 @@
                                 </button>
                                 <div className="flex items-center gap-1.5">
                                     {docId && docId.indexOf('appendix-') === 0 && (
-                                        <a href={['1','2','15','24','25','26','29'].indexOf(docId.slice(9)) >= 0 ? (DATA_DIR + '/pdf/appendix-' + docId.slice(9) + '.pdf') : ('https://library.wikisubmission.org/file/quran-the-final-testament-appendix-' + docId.slice(9))}
+                                        <a href={(docLang === 'ta' && ['1','2','15','24','25','26','29'].indexOf(docId.slice(9)) >= 0) ? (DATA_DIR + '/pdf/appendix-' + docId.slice(9) + '.pdf') : ('https://library.wikisubmission.org/file/quran-the-final-testament-appendix-' + docId.slice(9))}
                                            target="_blank" rel="noopener noreferrer" download
                                            className="lang-pill rounded-full font-bold text-xs px-3 py-1.5 inline-flex items-center gap-1.5" title="Download PDF">
                                             <Icon d={I.download} size={13} /> PDF
@@ -3162,7 +3191,21 @@
                                         {content.sections.map((sec, si) => (
                                             <section key={si}>
                                                 {sec.h && <h2 className={'font-display text-[21px] mb-3 mt-9 ' + (taMode ? 'font-tamil' : '')} style={{ color: 'var(--accent-deep)', fontWeight: 400 }}>{sec.h}</h2>}
-                                                {sec.items.map((it, ii) => it.t === 'img' ? (
+                                                {sec.items.map((it, ii) => it.t === 'table' ? (
+                                                    <div key={ii} className="my-4 overflow-x-auto">
+                                                        <table style={{ borderCollapse: 'collapse', fontSize: 13 }}>
+                                                            <tbody>
+                                                                {it.rows.map((r, ri) => (
+                                                                    <tr key={ri}>
+                                                                        {r.map((c, ci) => (
+                                                                            <td key={ci} className={taMode ? 'font-tamil' : ''} style={{ border: '1px solid var(--line)', padding: '4px 9px', textAlign: /^[\d\s().,x×+-]+$/.test(c) ? 'center' : 'left', color: ri === 0 ? 'var(--accent-deep)' : 'var(--ink-soft)', fontWeight: ri === 0 ? 700 : 400, whiteSpace: 'nowrap' }}>{c}</td>
+                                                                        ))}
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                ) : it.t === 'img' ? (
                                                     <div key={ii} className="my-5 flex justify-center">
                                                         <img src={it.src} alt="" loading="lazy" style={{ maxWidth: '100%', height: 'auto', background: '#fff', padding: '12px 14px', borderRadius: 12, border: '1px solid var(--line)' }} />
                                                     </div>
@@ -3623,7 +3666,7 @@
 
                     {/* ── Share sheet (desktop / no native share) ── */}
                     {dictSel && <DictPopup word={dictSel.word} x={dictSel.x} y={dictSel.y}
-                                           langs={dictTargets}
+                                           langs={dictTargets} dictLang={dictLang} setDictLang={setDictLang}
                                            onClose={() => setDictSel(null)} />}
 
                     {shareV && (() => {
