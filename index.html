@@ -642,7 +642,7 @@
         // Appendices that have a Tamil PDF in /pdf. Add the number here when the
         // matching pdf/appendix-N.pdf is committed, otherwise the button correctly
         // falls back to the English PDF and says so.
-        const TA_PDF_AVAILABLE = ['1','2','15','24','25','26','29'];
+        const TA_PDF_AVAILABLE = Array.from({length: 38}, (_, i) => String(i + 1)); // all 38 Tamil PDFs are in /pdf
 
         const surahs = [
                     {ar: "الفاتحة", en: "The Key (Al-Fatihah)", ta: "திறவுகோல் (அல்-ஃபாத்திஹாஹ்)", hi: "अल-फ़ातिहा", verses: 7, revelationOrder: 5, type: "Meccan"},
