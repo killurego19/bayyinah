@@ -639,6 +639,10 @@
     <script type="text/babel">
         const EXCEL_FILE_NAME = 'quran-data.xlsx';
         const DATA_DIR = '.';
+        // Appendices that have a Tamil PDF in /pdf. Add the number here when the
+        // matching pdf/appendix-N.pdf is committed, otherwise the button correctly
+        // falls back to the English PDF and says so.
+        const TA_PDF_AVAILABLE = ['1','2','15','24','25','26','29'];
 
         const surahs = [
                     {ar: "الفاتحة", en: "The Key (Al-Fatihah)", ta: "திறவுகோல் (அல்-ஃபாத்திஹாஹ்)", hi: "अल-फ़ातिहा", verses: 7, revelationOrder: 5, type: "Meccan"},
@@ -3156,10 +3160,11 @@
                                 </button>
                                 <div className="flex items-center gap-1.5">
                                     {docId && docId.indexOf('appendix-') === 0 && (
-                                        <a href={(docLang === 'ta' && ['1','2','15','24','25','26','29'].indexOf(docId.slice(9)) >= 0) ? (DATA_DIR + '/pdf/appendix-' + docId.slice(9) + '.pdf') : ('https://library.wikisubmission.org/file/quran-the-final-testament-appendix-' + docId.slice(9))}
+                                        <a href={(docLang === 'ta' && TA_PDF_AVAILABLE.indexOf(docId.slice(9)) >= 0) ? (DATA_DIR + '/pdf/appendix-' + docId.slice(9) + '.pdf') : ('https://library.wikisubmission.org/file/quran-the-final-testament-appendix-' + docId.slice(9))}
                                            target="_blank" rel="noopener noreferrer"
-                                           className="lang-pill rounded-full font-bold text-xs px-3 py-1.5 inline-flex items-center gap-1.5" title="Open PDF">
-                                            <Icon d={I.download} size={13} /> PDF
+                                           className="lang-pill rounded-full font-bold text-xs px-3 py-1.5 inline-flex items-center gap-1.5"
+                                           title={(docLang === 'ta' && TA_PDF_AVAILABLE.indexOf(docId.slice(9)) >= 0) ? 'Open Tamil PDF' : 'Open English PDF'}>
+                                            <Icon d={I.download} size={13} /> {(docLang === 'ta' && TA_PDF_AVAILABLE.indexOf(docId.slice(9)) >= 0) ? 'PDF' : (docLang === 'ta' ? 'PDF (English)' : 'PDF')}
                                         </a>
                                     )}
                                     {docData && docData.multi && Object.keys(docData.multi).map(k => (
