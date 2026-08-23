@@ -561,7 +561,7 @@
         .footnote-star:hover { color: var(--emerald-soft); }
 
         /* long-press dictionary */
-        .dict-on { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+        .dict-on .dword { touch-action: manipulation; }
         .dword { cursor: pointer; border-radius: 4px; transition: background .15s; }
         @media (hover:hover) { .dword:hover { background: color-mix(in srgb, var(--gold) 16%, transparent); } }
 
@@ -1116,34 +1116,48 @@
 
         // ─── Dictionary popup: long-press an English word → meaning in the selected language ───
         function DictPopup({ word, x, y, langs, onClose }) {
-            // Offline built-in dictionary (Tamil/Hindi, high quality) + free English definition. No AI tokens.
-            const [st, setSt] = useState({ loading: true, en: '', ta: '', hi: '' });
+            // langs: target language codes to show. ta/hi = instant offline dict; others = free translation. Always adds an English definition.
+            const [st, setSt] = useState({ loading: true, en: '', items: [] });
             useEffect(() => {
                 let alive = true;
                 const w = (word || '').toLowerCase().replace(/[^a-z'’-]/g, '');
-                if (!w) { setSt({ loading: false, en: '', ta: '', hi: '' }); return; }
+                if (!w) { setSt({ loading: false, en: '', items: [] }); return; }
+                const LMAP = { ta: ['தமிழ்', 'font-tamil'], hi: ['हिन्दी', 'font-hindi'], ml: ['മലയാളം', ''], te: ['తెలుగు', ''], kn: ['ಕನ್ನಡ', ''], ur: ['اردو', ''], bn: ['বাংলা', ''], ar: ['العربية', ''], fr: ['Français', ''], es: ['Español', ''], de: ['Deutsch', ''], id: ['Bahasa Indonesia', ''], ms: ['Bahasa Melayu', ''] };
                 (async () => {
-                    if (!window.__dict) {
-                        try { window.__dict = await (await fetch(DATA_DIR + '/dictionary.json')).json(); }
-                        catch (e) { window.__dict = {}; }
-                    }
+                    if (!window.__dict) { try { window.__dict = await (await fetch(DATA_DIR + '/dictionary.json')).json(); } catch (e) { window.__dict = {}; } }
                     if (!alive) return;
                     const ent = window.__dict[w] || ['', ''];
-                    setSt({ loading: false, en: '', ta: ent[0] || '', hi: ent[1] || '' });
+                    const items = [];
+                    for (const code of langs) {
+                        if (code === 'en') continue;
+                        let text = '';
+                        if (code === 'ta') text = ent[0] || '';
+                        else if (code === 'hi') text = ent[1] || '';
+                        else {
+                            const ck = 'dictX:' + code + ':' + w;
+                            try { text = localStorage.getItem(ck) || ''; } catch (e) {}
+                            if (!text) {
+                                try {
+                                    const r = await fetch('https://api.mymemory.translated.net/get?q=' + encodeURIComponent(w) + '&langpair=en|' + code);
+                                    const j = await r.json();
+                                    const t = ((j && j.responseData && j.responseData.translatedText) || '').trim();
+                                    if (t && !/MYMEMORY|INVALID|NO QUERY|QUERY LENGTH/i.test(t) && t.toLowerCase() !== w) { text = t; try { localStorage.setItem(ck, t); } catch (e2) {} }
+                                } catch (e3) {}
+                            }
+                        }
+                        if (text) { const meta = LMAP[code] || [code.toUpperCase(), '']; items.push({ label: meta[0], font: meta[1], text: text }); }
+                    }
+                    if (!alive) return;
+                    setSt({ loading: false, en: '', items: items });
                     let en = ''; const ek = 'dictEN:' + w;
                     try { en = localStorage.getItem(ek) || ''; } catch (e) {}
                     if (!en) {
-                        try {
-                            const r = await fetch('https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(w));
-                            if (r.ok) { const j = await r.json(); en = String(j[0].meanings[0].definitions[0].definition || '').slice(0, 140); if (en) { try { localStorage.setItem(ek, en); } catch (e2) {} } }
-                        } catch (e3) {}
+                        try { const r = await fetch('https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(w)); if (r.ok) { const j = await r.json(); en = String(j[0].meanings[0].definitions[0].definition || '').slice(0, 140); if (en) { try { localStorage.setItem(ek, en); } catch (e2) {} } } } catch (e3) {}
                     }
                     if (alive && en) setSt(s => ({ ...s, en: en }));
                 })();
                 return () => { alive = false; };
-            }, [word]);
-            const showTa = langs.indexOf('ta') >= 0 && st.ta;
-            const showHi = langs.indexOf('hi') >= 0 && st.hi;
+            }, [word, langs.join(',')]);
             const vw = window.innerWidth, W = 262;
             const left = Math.max(12, Math.min((x || vw / 2) - W / 2, vw - W - 12));
             const top = Math.max(12, (y || 100) + 14);
@@ -1157,24 +1171,18 @@
                         </div>
                         {st.loading ? (
                             <div className="text-[13px] flex items-center gap-2 py-1" style={{ color: 'var(--muted)' }}><span className="spin inline-flex"><Icon d={I.loader} size={13} /></span> …</div>
-                        ) : (!showTa && !showHi && !st.en) ? (
+                        ) : (!st.items.length && !st.en) ? (
                             <div className="text-[13px] py-0.5" style={{ color: 'var(--muted)' }}>No dictionary entry found.</div>
                         ) : (
                             <div className="space-y-2.5">
-                                {showTa && (
-                                    <div>
-                                        <div className="text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: 'var(--gold)' }}>தமிழ்</div>
-                                        <div className="text-[16px] leading-snug font-tamil" style={{ color: 'var(--accent-deep)' }}>{st.ta}</div>
+                                {st.items.map((it, i) => (
+                                    <div key={i} style={i ? { borderTop: '1px solid var(--line)', paddingTop: 8 } : {}}>
+                                        <div className="text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: 'var(--gold)' }}>{it.label}</div>
+                                        <div className={'text-[16px] leading-snug ' + it.font} style={{ color: 'var(--accent-deep)' }}>{it.text}</div>
                                     </div>
-                                )}
-                                {showHi && (
-                                    <div style={showTa ? { borderTop: '1px solid var(--line)', paddingTop: 8 } : {}}>
-                                        <div className="text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: 'var(--gold)' }}>हिन्दी</div>
-                                        <div className="text-[16px] leading-snug font-hindi" style={{ color: 'var(--accent-deep)' }}>{st.hi}</div>
-                                    </div>
-                                )}
+                                ))}
                                 {st.en && (
-                                    <div style={(showTa || showHi) ? { borderTop: '1px solid var(--line)', paddingTop: 8 } : {}}>
+                                    <div style={st.items.length ? { borderTop: '1px solid var(--line)', paddingTop: 8 } : {}}>
                                         <div className="text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: 'var(--muted)' }}>English</div>
                                         <div className="text-[13.5px] leading-snug" style={{ color: 'var(--ink-soft)' }}>{st.en}</div>
                                     </div>
@@ -1846,22 +1854,20 @@
             const hasFootnote = verse.English_Footnote || verse.Tamil_Footnote || verse.Hindi_Footnote;
             const [openFootnote, setOpenFootnote] = useState(false);
             // long-press (touch) / right-click (desktop) an English word → dictionary meaning
-            const dictTimer = useRef(null);
+            const lastTapRef = useRef({ t: 0, w: '' });
             const wordAt = tgt => { const el = tgt && tgt.closest && tgt.closest('.dword'); return el ? (el.getAttribute('data-w') || '') : ''; };
-            const wDown = e => {
+            // double-tap / double-click a word → dictionary (leaves normal long-press selection & copy intact)
+            const wTap = e => {
                 if (!onDefineWord) return;
-                if (e.button && e.button !== 0) return;   // ignore right/middle mouse (contextmenu handles right-click)
                 const w = wordAt(e.target); if (!w) return;
-                const pt = e.touches ? e.touches[0] : e, x = pt.clientX, y = pt.clientY;
-                dictTimer.current = setTimeout(() => {
-                    onDefineWord(w, x, y);
-                    // swallow the click that ends this long-press so it doesn't instantly close the popup
-                    const swallow = ev => { ev.stopPropagation(); ev.preventDefault(); document.removeEventListener('click', swallow, true); };
-                    document.addEventListener('click', swallow, true);
-                    setTimeout(() => document.removeEventListener('click', swallow, true), 800);
-                }, 430);
+                const now = Date.now();
+                if (now - lastTapRef.current.t < 350 && lastTapRef.current.w === w) {
+                    e.preventDefault();
+                    const pt = (e.changedTouches && e.changedTouches[0]) || e;
+                    onDefineWord(w, pt.clientX || 0, pt.clientY || 0);
+                    lastTapRef.current = { t: 0, w: '' };
+                } else { lastTapRef.current = { t: now, w: w }; }
             };
-            const wUp = () => clearTimeout(dictTimer.current);
             const wMenu = e => { if (!onDefineWord) return; const w = wordAt(e.target); if (w) { e.preventDefault(); onDefineWord(w, e.clientX, e.clientY); } };
 
             const arabicLine = wbwWords ? (
@@ -1919,8 +1925,7 @@
 
                     {show.en && verse.English && (
                         <p className={`verse-en ${onDefineWord ? 'dict-on' : ''} ${trSizes[fontSize]} leading-relaxed mt-3 mb-0 ${isBasmalah ? 'text-center' : ''}`} style={{ color: 'var(--ink-soft)' }}
-                           onTouchStart={wDown} onTouchEnd={wUp} onTouchMove={wUp}
-                           onMouseDown={wDown} onMouseUp={wUp} onMouseLeave={wUp} onContextMenu={wMenu}>
+                           onClick={wTap} onContextMenu={wMenu}>
                             <TransText text={verse.English} onStar={() => setOpenFootnote(o => !o)} query={query} wrap={!!onDefineWord} />
                         </p>
                     )}
@@ -2306,22 +2311,27 @@
             const [audioWord, setAudioWord] = useState(null);
             const [shareV, setShareV] = useState(null);
             const [dictSel, setDictSel] = useState(null);
+            const [dictLang, setDictLang] = useState(() => { try { return localStorage.getItem('quranDictLang') || 'auto'; } catch (e) { return 'auto'; } });
+            useEffect(() => { try { localStorage.setItem('quranDictLang', dictLang); } catch (e) {} }, [dictLang]);
+            const dictTargets = useMemo(() => {
+                if (dictLang && dictLang !== 'auto') return [dictLang];
+                const a = [show.ta ? 'ta' : '', show.hi ? 'hi' : ''].filter(Boolean);
+                return a.length ? a : ['ta'];
+            }, [dictLang, show.ta, show.hi]);
             const defineWord = useCallback((w, x, y) => setDictSel({ word: w, x, y }), []);
-            // doc-page (appendix/intro) long-press dictionary handlers
-            const docDictTimer = useRef(null);
+            // doc-page (appendix/intro) double-tap dictionary handlers (text stays selectable)
+            const docLastTap = useRef({ t: 0, w: '' });
             const docWordAt = tgt => { const el = tgt && tgt.closest && tgt.closest('.dword'); return el ? (el.getAttribute('data-w') || '') : ''; };
-            const dDown = e => {
-                if (e.button && e.button !== 0) return;
+            const dTap = e => {
                 const w = docWordAt(e.target); if (!w) return;
-                const pt = e.touches ? e.touches[0] : e, x = pt.clientX, y = pt.clientY;
-                docDictTimer.current = setTimeout(() => {
-                    defineWord(w, x, y);
-                    const sw = ev => { ev.stopPropagation(); ev.preventDefault(); document.removeEventListener('click', sw, true); };
-                    document.addEventListener('click', sw, true);
-                    setTimeout(() => document.removeEventListener('click', sw, true), 700);
-                }, 430);
+                const now = Date.now();
+                if (now - docLastTap.current.t < 350 && docLastTap.current.w === w) {
+                    e.preventDefault();
+                    const pt = (e.changedTouches && e.changedTouches[0]) || e;
+                    defineWord(w, pt.clientX || 0, pt.clientY || 0);
+                    docLastTap.current = { t: 0, w: '' };
+                } else { docLastTap.current = { t: now, w: w }; }
             };
-            const dUp = () => clearTimeout(docDictTimer.current);
             const dMenu = e => { const w = docWordAt(e.target); if (w) { e.preventDefault(); defineWord(w, e.clientX, e.clientY); } };
 
             const stopAudio = useCallback(() => {
@@ -3117,8 +3127,8 @@
                                 </button>
                                 <div className="flex items-center gap-1.5">
                                     {docId && docId.indexOf('appendix-') === 0 && (
-                                        <a href={`https://library.wikisubmission.org/file/quran-the-final-testament-appendix-${docId.slice(9)}`}
-                                           target="_blank" rel="noopener noreferrer"
+                                        <a href={['1','2','15','24','25','26','29'].indexOf(docId.slice(9)) >= 0 ? (DATA_DIR + '/pdf/appendix-' + docId.slice(9) + '.pdf') : ('https://library.wikisubmission.org/file/quran-the-final-testament-appendix-' + docId.slice(9))}
+                                           target="_blank" rel="noopener noreferrer" download
                                            className="lang-pill rounded-full font-bold text-xs px-3 py-1.5 inline-flex items-center gap-1.5" title="Download PDF">
                                             <Icon d={I.download} size={13} /> PDF
                                         </a>
@@ -3142,9 +3152,7 @@
                                 const bodyCls = taMode ? 'font-tamil' : 'verse-en';
                                 return (
                                     <article className={"ws-card rounded-3xl mt-5 px-6 sm:px-10 py-9 " + (taMode ? '' : 'dict-on')}
-                                             onTouchStart={taMode ? undefined : dDown} onTouchEnd={dUp} onTouchMove={dUp}
-                                             onMouseDown={taMode ? undefined : dDown} onMouseUp={dUp} onMouseLeave={dUp}
-                                             onContextMenu={taMode ? undefined : dMenu}>
+                                             onClick={taMode ? undefined : dTap} onContextMenu={taMode ? undefined : dMenu}>
                                         <div className="text-center mb-8">
                                             <div className="eyebrow">{content.eyebrow}</div>
                                             <h1 className={'font-display hero-title tracking-tight mt-2 mb-0 ' + (taMode ? 'font-tamil' : '')} style={{ fontSize: 'clamp(26px, 5vw, 42px)', fontWeight: 400 }}>{content.title}</h1>
@@ -3399,6 +3407,29 @@
                                     ))}
                                 </div>
 
+                                <div className="eyebrow mb-2">Dictionary language</div>
+                                <select value={dictLang} onChange={e => setDictLang(e.target.value)}
+                                        className="w-full mb-2 rounded-xl px-3 py-2 text-sm cursor-pointer"
+                                        style={{ background: 'var(--card)', border: '1px solid var(--line-strong)', color: 'var(--ink)' }}>
+                                    <option value="auto">Auto — match reading languages</option>
+                                    <option value="ta">Tamil · தமிழ்</option>
+                                    <option value="hi">Hindi · हिन्दी</option>
+                                    <option value="ml">Malayalam · മലയാളം</option>
+                                    <option value="te">Telugu · తెలుగు</option>
+                                    <option value="kn">Kannada · ಕನ್ನಡ</option>
+                                    <option value="ur">Urdu · اردو</option>
+                                    <option value="bn">Bengali · বাংলা</option>
+                                    <option value="ar">Arabic · العربية</option>
+                                    <option value="fr">French · Français</option>
+                                    <option value="es">Spanish · Español</option>
+                                    <option value="id">Indonesian · Bahasa</option>
+                                    <option value="ms">Malay · Melayu</option>
+                                    <option value="en">English only</option>
+                                </select>
+                                <p className="text-[12px] mb-5" style={{ color: 'var(--muted)' }}>
+                                    Double-tap an English word to see its meaning in this language. Tamil &amp; Hindi are built-in &amp; instant; other languages are translated online.
+                                </p>
+
                                 <p className="text-[12px] mt-1 mb-3" style={{ color: 'var(--muted)' }}>
                                     The speaker button on a verse — and Play chapter — read aloud in every language selected above
                                     (Qari recitation for Arabic, natural voices for English &amp; Tamil), in order.
@@ -3592,7 +3623,7 @@
 
                     {/* ── Share sheet (desktop / no native share) ── */}
                     {dictSel && <DictPopup word={dictSel.word} x={dictSel.x} y={dictSel.y}
-                                           langs={[show.ta ? 'ta' : '', show.hi ? 'hi' : ''].filter(Boolean)}
+                                           langs={dictTargets}
                                            onClose={() => setDictSel(null)} />}
 
                     {shareV && (() => {
