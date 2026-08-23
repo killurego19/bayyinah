@@ -3157,8 +3157,8 @@
                                 <div className="flex items-center gap-1.5">
                                     {docId && docId.indexOf('appendix-') === 0 && (
                                         <a href={(docLang === 'ta' && ['1','2','15','24','25','26','29'].indexOf(docId.slice(9)) >= 0) ? (DATA_DIR + '/pdf/appendix-' + docId.slice(9) + '.pdf') : ('https://library.wikisubmission.org/file/quran-the-final-testament-appendix-' + docId.slice(9))}
-                                           target="_blank" rel="noopener noreferrer" download
-                                           className="lang-pill rounded-full font-bold text-xs px-3 py-1.5 inline-flex items-center gap-1.5" title="Download PDF">
+                                           target="_blank" rel="noopener noreferrer"
+                                           className="lang-pill rounded-full font-bold text-xs px-3 py-1.5 inline-flex items-center gap-1.5" title="Open PDF">
                                             <Icon d={I.download} size={13} /> PDF
                                         </a>
                                     )}
