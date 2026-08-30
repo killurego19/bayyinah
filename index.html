@@ -1893,7 +1893,7 @@
                     lastTapRef.current = { t: 0, w: '' };
                 } else { lastTapRef.current = { t: now, w: w }; }
             };
-            const wMenu = e => { if (!onDefineWord) return; const w = wordAt(e.target); if (w) { e.preventDefault(); onDefineWord(w, e.clientX, e.clientY); } };
+            const wMenu = e => { if (!onDefineWord || !window.__canHover) return; const w = wordAt(e.target); if (w) { e.preventDefault(); onDefineWord(w, e.clientX, e.clientY); } };
 
             const arabicLine = wbwWords ? (
                 <div dir="rtl" lang="ar" className={`font-arabic ${isBasmalah ? 'text-center' : 'text-right'}`}
@@ -2357,7 +2357,7 @@
                     docLastTap.current = { t: 0, w: '' };
                 } else { docLastTap.current = { t: now, w: w }; }
             };
-            const dMenu = e => { const w = docWordAt(e.target); if (w) { e.preventDefault(); defineWord(w, e.clientX, e.clientY); } };
+            const dMenu = e => { if (!window.__canHover) return; const w = docWordAt(e.target); if (w) { e.preventDefault(); defineWord(w, e.clientX, e.clientY); } };
 
             const stopAudio = useCallback(() => {
                 playTokenRef.current++;
