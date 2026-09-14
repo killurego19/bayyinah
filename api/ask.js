@@ -19,7 +19,9 @@
 
 // Each provider tries its models in order; a "model not found / decommissioned"
 // error moves to the next model, any other error moves to the next provider.
-const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.0-flash", "gemini-2.5-flash"];
+// 2.0-flash first = fast, non-"thinking" (near-instant replies). flash-latest/2.5 are
+// capable fallbacks (they burn output tokens on hidden reasoning, so they're slower).
+const GEMINI_MODELS = ["gemini-2.0-flash", "gemini-flash-latest", "gemini-2.5-flash"];
 const GROQ_MODELS   = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"];
 // NVIDIA free-hosted models (build.nvidia.com). Meta/Llama free endpoints were retired 2026.
 // nemotron-3-super answers cleanly & fast WHEN reasoning is disabled via the system
