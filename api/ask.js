@@ -21,7 +21,9 @@
 // error moves to the next model, any other error moves to the next provider.
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.0-flash", "gemini-2.5-flash"];
 const GROQ_MODELS   = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"];
-const NVIDIA_MODELS = ["meta/llama-3.3-70b-instruct", "meta/llama-3.1-8b-instruct"];
+// NVIDIA free-hosted models (build.nvidia.com). Meta/Llama free endpoints were retired 2026;
+// these are the current free NIM chat models (strong → multilingual → fast).
+const NVIDIA_MODELS = ["nvidia/nemotron-3-super-120b-a12b", "google/gemma-4-31b-it", "nvidia/nemotron-3.5-lightning-30b-a3b"];
 
 const PROVIDER_TIMEOUT_MS = 13000; // hard cap per upstream call (so a stalled provider can't hang the request)
 
