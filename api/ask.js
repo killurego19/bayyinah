@@ -21,9 +21,10 @@
 // error moves to the next model, any other error moves to the next provider.
 const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.0-flash", "gemini-2.5-flash"];
 const GROQ_MODELS   = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"];
-// NVIDIA free-hosted models (build.nvidia.com). Meta/Llama free endpoints were retired 2026;
-// these are the current free NIM chat models (strong → multilingual → fast).
-const NVIDIA_MODELS = ["nvidia/nemotron-3-super-120b-a12b", "google/gemma-4-31b-it", "nvidia/nemotron-3.5-lightning-30b-a3b"];
+// NVIDIA free-hosted models (build.nvidia.com). Meta/Llama free endpoints were retired 2026.
+// nemotron-3-super answers cleanly & fast WHEN reasoning is disabled via the system
+// directive "detailed thinking off" (a Nemotron feature); gemma-4 is a clean backup.
+const NVIDIA_MODELS = ["nvidia/nemotron-3-super-120b-a12b", "google/gemma-4-31b-it"];
 
 const PROVIDER_TIMEOUT_MS = 13000; // hard cap per upstream call (so a stalled provider can't hang the request)
 
@@ -90,10 +91,22 @@ export default async function handler(req, res) {
     }
 
     // ---- OpenAI-compatible providers (Groq + NVIDIA) ----
-    async function callOpenAICompat(endpoint, key, models){
+    // nemotron mode: NVIDIA's Nemotron models only stay clean (no reasoning dump) when the
+    // system message is EXACTLY "detailed thinking off"; the real instructions are folded
+    // into the first user turn instead.
+    async function callOpenAICompat(endpoint, key, models, nemotron){
       const oa = [];
-      if (system) oa.push({ role: "system", content: system });
-      for (const m of messages) oa.push({ role: m.role === "assistant" ? "assistant" : "user", content: String(m.content || "") });
+      let foldSys = "";
+      if (nemotron) { oa.push({ role: "system", content: "detailed thinking off" }); foldSys = system ? system + "\n\n" : ""; }
+      else if (system) { oa.push({ role: "system", content: system }); }
+      let folded = false;
+      for (const m of messages) {
+        const role = m.role === "assistant" ? "assistant" : "user";
+        let content = String(m.content || "");
+        if (foldSys && !folded && role === "user") { content = foldSys + content; folded = true; }
+        oa.push({ role, content });
+      }
+      if (foldSys && !folded) oa.push({ role: "user", content: foldSys.trim() });
       let last = { ok: false, status: 0, text: "", err: "" };
       for (const model of models) {
         try {
@@ -126,7 +139,7 @@ export default async function handler(req, res) {
     }
     // 4) NVIDIA
     if ((!result || !result.ok || !result.text) && nvidiaKey) {
-      const n = await callOpenAICompat("https://integrate.api.nvidia.com/v1/chat/completions", nvidiaKey, NVIDIA_MODELS);
+      const n = await callOpenAICompat("https://integrate.api.nvidia.com/v1/chat/completions", nvidiaKey, NVIDIA_MODELS, true);
       if (n.ok && n.text) result = n; else if (!result) result = n;
     }
 
